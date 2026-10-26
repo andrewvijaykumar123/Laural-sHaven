@@ -65,6 +65,11 @@ function showToast(message) {
   }, 2600);
 }
 
+function isStaticHost() {
+  const host = window.location.hostname || '';
+  return host.includes('github.io') || host.includes('pages.dev') || host === '';
+}
+
 function getOrderSummary() {
   const items = Array.from(cart.values()).map((entry) => ({
     id: entry.id,
@@ -254,15 +259,41 @@ async function submitOrder(event) {
   };
 
   try {
+    if (isStaticHost()) {
+      const confirmedOrder = {
+        ...payload,
+        id: payload.transactionRef,
+        transactionRef: payload.transactionRef,
+        total: Number(payload.total || 0),
+        items: payload.items || []
+      };
+
+      showToast(`Order placed successfully • ${confirmedOrder.id}`);
+      clearCart();
+      closeModal(elements.checkoutModal);
+      closeModal(elements.qaModal);
+      elements.checkoutForm.reset();
+      state.selectedUPI = null;
+      showConfirmation(confirmedOrder, 'local_static');
+      return;
+    }
+
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
+    const text = await response.text();
+    let result;
 
-    if (!result.success && !result.orderId) {
+    try {
+      result = JSON.parse(text);
+    } catch (error) {
+      throw new Error('Checkout backend is unavailable on this host.');
+    }
+
+    if (!response.ok || (!result.success && !result.orderId)) {
       throw new Error(result.message || 'Unable to place order.');
     }
 
