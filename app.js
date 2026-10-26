@@ -24,6 +24,10 @@ function apiUrl(path) {
   return `${getApiBase()}${normalizedPath}`;
 }
 
+function hasConfiguredBackend() {
+  return Boolean((window.LH_API_BASE || '').trim());
+}
+
 const elements = {
   menuContainer: document.getElementById('menuContainer'),
   cartTrigger: document.getElementById('cartTrigger'),
@@ -264,23 +268,8 @@ async function submitOrder(event) {
   };
 
   try {
-    if (isStaticHost()) {
-      const confirmedOrder = {
-        ...payload,
-        id: payload.transactionRef,
-        transactionRef: payload.transactionRef,
-        total: Number(payload.total || 0),
-        items: payload.items || []
-      };
-
-      showToast(`Order placed successfully • ${confirmedOrder.id}`);
-      clearCart();
-      closeModal(elements.checkoutModal);
-      closeModal(elements.qaModal);
-      elements.checkoutForm.reset();
-      state.selectedUPI = null;
-      showConfirmation(confirmedOrder, 'local_static');
-      return;
+    if (isStaticHost() && !hasConfiguredBackend()) {
+      throw new Error('The public storefront is not connected to the live backend yet. Set window.LH_API_BASE to your deployed API URL to sync orders with the admin console.');
     }
 
     const response = await fetch(apiUrl('/api/checkout'), {
