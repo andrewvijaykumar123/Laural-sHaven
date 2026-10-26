@@ -1,3 +1,4 @@
+const ADMIN_PASSWORD = 'MyLove4Jesu$';
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
@@ -16,8 +17,31 @@ const elements = {
   deliveredOrders: document.getElementById('deliveredOrders'),
   ordersTable: document.getElementById('ordersTable'),
   popularItems: document.getElementById('popularItems'),
-  refreshButton: document.getElementById('refreshButton')
+  refreshButton: document.getElementById('refreshButton'),
+  adminAuth: document.getElementById('adminAuth'),
+  dashboardShell: document.getElementById('dashboardShell'),
+  adminLoginForm: document.getElementById('adminLoginForm'),
+  adminPassword: document.getElementById('adminPassword'),
+  authError: document.getElementById('authError')
 };
+
+function isAuthorized() {
+  return sessionStorage.getItem('lauralsHavenAdminPassword') === ADMIN_PASSWORD;
+}
+
+function showAuthScreen(message = '') {
+  if (elements.authError) {
+    elements.authError.textContent = message;
+  }
+  elements.dashboardShell.classList.add('hidden-shell');
+  elements.adminAuth.classList.remove('hidden-shell');
+}
+
+function unlockAdmin() {
+  sessionStorage.setItem('lauralsHavenAdminPassword', ADMIN_PASSWORD);
+  elements.adminAuth.classList.add('hidden-shell');
+  elements.dashboardShell.classList.remove('hidden-shell');
+}
 
 function formatCurrency(value) {
   return currencyFormatter.format(Number(value || 0));
@@ -160,5 +184,29 @@ document.addEventListener('click', (event) => {
   }
 });
 
-elements.refreshButton.addEventListener('click', loadDashboard);
-loadDashboard();
+if (elements.adminLoginForm) {
+  elements.adminLoginForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const password = elements.adminPassword.value.trim();
+
+    if (password === ADMIN_PASSWORD) {
+      unlockAdmin();
+      loadDashboard();
+      return;
+    }
+
+    showAuthScreen('Incorrect password. Please try again.');
+    elements.adminPassword.value = '';
+  });
+}
+
+if (elements.refreshButton) {
+  elements.refreshButton.addEventListener('click', loadDashboard);
+}
+
+if (!isAuthorized()) {
+  showAuthScreen();
+} else {
+  unlockAdmin();
+  loadDashboard();
+}

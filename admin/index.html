@@ -10,7 +10,19 @@
     <link rel="stylesheet" href="/admin/styles.css" />
   </head>
   <body>
-    <div class="dashboard-shell">
+    <div id="adminAuth" class="admin-auth">
+      <div class="auth-panel">
+        <p class="eyebrow">Admin access</p>
+        <h2>Enter password</h2>
+        <form id="adminLoginForm" class="auth-form">
+          <input id="adminPassword" type="password" placeholder="Password" autocomplete="current-password" required />
+          <button type="submit" class="refresh-button auth-button">Unlock console</button>
+        </form>
+        <p id="authError" class="auth-error" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="dashboardShell" class="dashboard-shell hidden-shell">
       <header class="topbar">
         <div>
           <p class="eyebrow">Operations hub</p>
@@ -62,6 +74,8 @@
           <ul id="popularItems" class="popular-items"></ul>
         </section>
       </main>
+    </div>
+
     </div>
 
     <script src="/admin/app.js"></script>
