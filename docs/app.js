@@ -79,12 +79,12 @@ function renderCart() {
 
   elements.cartCount.textContent = items.reduce((sum, item) => sum + item.qty, 0);
   elements.subtotalValue.textContent = formatCurrency(orderSummary.subtotal);
-  elements.serviceFeeValue.textContent = 'Included';
-  elements.sgstValue.textContent = formatCurrency(orderSummary.total);
+  if (elements.serviceFeeValue) elements.serviceFeeValue.textContent = 'Included';
+  if (elements.sgstValue) elements.sgstValue.textContent = formatCurrency(orderSummary.total);
   elements.totalValue.textContent = formatCurrency(orderSummary.total);
   elements.checkoutSubtotal.textContent = formatCurrency(orderSummary.subtotal);
-  elements.checkoutServiceFee.textContent = 'Included';
-  elements.checkoutSgst.textContent = formatCurrency(orderSummary.total);
+  if (elements.checkoutServiceFee) elements.checkoutServiceFee.textContent = 'Included';
+  if (elements.checkoutSgst) elements.checkoutSgst.textContent = formatCurrency(orderSummary.total);
   elements.checkoutTotal.textContent = formatCurrency(orderSummary.total);
   renderQrCode();
 

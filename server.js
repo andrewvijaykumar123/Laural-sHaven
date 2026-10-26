@@ -269,7 +269,6 @@ function createEmailHtml(order) {
           </table>
           <div style="padding-top:18px; border-top:1px solid #e5e7eb; margin-top:18px; text-align:right;">
             <p style="margin:6px 0;">Subtotal: ₹${order.subtotal}</p>
-            <p style="margin:6px 0;">GST included in listed prices</p>
             <p style="margin:6px 0; font-size:22px; font-weight:700;">Total: ₹${order.total}</p>
           </div>
         </div>
@@ -317,8 +316,6 @@ app.post('/api/checkout', async (req, res) => {
   const orderItems = Array.isArray(payload.items) ? payload.items : [];
   const transactionRef = String(payload.transactionRef || `LH-${crypto.randomBytes(6).toString('hex').toUpperCase()}`);
   const subtotal = Number(payload.subtotal || 0);
-  const cgst = 0;
-  const sgst = 0;
   const total = Number(payload.total || subtotal);
 
   if (!customerName || !phone || orderItems.length === 0) {
@@ -344,8 +341,6 @@ app.post('/api/checkout', async (req, res) => {
       price: Number(item.price || 0)
     })),
     subtotal,
-    cgst,
-    sgst,
     total
   };
 
