@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laural's Haven | Gourmet Ordering</title>
+    <meta
+      name="description"
+      content="Premium café ordering experience for Laural's Haven with live UPI checkout and kitchen-ready order management."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20261026-1" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <span class="brand-badge">LH</span>
+          <div>
+            <p class="eyebrow">Cafe | Lounge</p>
+            <h1>Laural's Haven</h1>
+          </div>
+        </div>
+        <button class="cart-trigger" id="cartTrigger" aria-label="Open cart">
+          <span>Cart</span>
+          <strong id="cartCount">0</strong>
+        </button>
+      </header>
+
+      <main class="main-layout">
+        <section class="hero">
+          <div class="hero-copy">
+            <span class="pill">Freshly prepared • Fast delivery</span>
+            <h2>Good food. Good vibes. Great company.</h2>
+            <p>
+              Explore the signature café menu, build your perfect meal, and check out in a few taps using UPI. Your order syncs live with the kitchen console.
+            </p>
+            <div class="feature-row" aria-label="Store highlights">
+              <div class="feature-pill">
+                <strong>12 min</strong>
+                <span>average prep</span>
+              </div>
+              <div class="feature-pill">
+                <strong>Fresh</strong>
+                <span>daily made</span>
+              </div>
+              <div class="feature-pill">
+                <strong>Live</strong>
+                <span>kitchen sync</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-card">
+            <span>Today’s special</span>
+            <h3>Haven Fuel</h3>
+            <p>Mocha energy, creamy indulgence, and café comfort in one shake.</p>
+            <div class="hero-card-meta">
+              <strong>₹159</strong>
+              <span>No email required</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="menu-panel">
+          <div class="section-heading">
+            <div>
+              <p>Menu</p>
+              <h3>Curated for every mood</h3>
+            </div>
+            <button id="clearFilters" class="text-button">Reset</button>
+          </div>
+
+          <div id="menuContainer" class="menu-container" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <aside class="cart-panel" id="cartPanel" aria-label="Shopping cart">
+        <div class="cart-header">
+          <h3>Your order</h3>
+          <button id="closeCart" class="icon-button" aria-label="Close cart">×</button>
+        </div>
+
+        <div id="cartItems" class="cart-items"></div>
+
+        <div class="totals">
+          <div><span>Subtotal</span><strong id="subtotalValue">₹0</strong></div>
+          <div class="grand-total"><span>Total</span><strong id="totalValue">₹0</strong></div>
+        </div>
+
+        <button id="checkoutButton" class="primary-button">Proceed to checkout</button>
+      </aside>
+    </div>
+
+    <div id="checkoutModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card checkout-card">
+        <div class="modal-header">
+          <h3>Checkout</h3>
+          <button class="icon-button" data-close="checkoutModal" aria-label="Close checkout">×</button>
+        </div>
+
+        <form id="checkoutForm" class="checkout-form">
+          <div class="field-group">
+            <label for="customerName">Full name</label>
+            <input id="customerName" name="customerName" type="text" placeholder="Enter your full name" required />
+          </div>
+
+          <div class="field-group">
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" placeholder="+91 98xxx xxxxx" required />
+          </div>
+
+          <div class="field-group">
+            <label for="notes">Order notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Any special instructions?"></textarea>
+          </div>
+
+          <div class="mini-note">No email required. Your order is sent directly to the kitchen dashboard.</div>
+
+          <div class="payment-panel">
+            <p>Choose a payment method</p>
+            <div class="upi-options">
+              <button type="button" class="pill-option app-option" data-upi="gpay">Google Pay</button>
+              <button type="button" class="pill-option app-option" data-upi="phonepe">PhonePe</button>
+              <button type="button" class="pill-option app-option" data-upi="paytm">Paytm</button>
+              <button type="button" class="pill-option app-option" data-upi="bhim">BHIM UPI</button>
+              <button type="button" class="pill-option secondary" id="qrPaymentButton">Scan QR</button>
+            </div>
+          </div>
+
+          <div class="summary-box">
+            <div><span>Subtotal</span><strong id="checkoutSubtotal">₹0</strong></div>
+            <div class="grand-total"><span>Total</span><strong id="checkoutTotal">₹0</strong></div>
+          </div>
+
+          <button type="submit" class="primary-button">Place order</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="qrModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card qr-card">
+        <div class="modal-header">
+          <h3>Scan to pay</h3>
+          <button class="icon-button" data-close="qrModal" aria-label="Close QR scan">×</button>
+        </div>
+        <div class="qr-panel">
+          <div class="qr-frame">
+            <img id="qrCodeImage" alt="UPI QR code for payment" />
+          </div>
+          <div class="qr-meta">
+            <p>UPI ID: <strong>paytm.s1pl5v7@pty</strong></p>
+            <p>Accepted apps: GPay, PhonePe, Paytm, BHIM</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirmationModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card confirmation-card">
+        <div class="success-badge">✓</div>
+        <p class="confirm-kicker">Payment received</p>
+        <h3>Order confirmed</h3>
+
+        <div class="confirmation-grid">
+          <div>
+            <span>Order ID</span>
+            <strong id="confirmationOrderId">-</strong>
+          </div>
+          <div>
+            <span>Transaction</span>
+            <strong id="confirmationTransaction">-</strong>
+          </div>
+          <div>
+            <span>Customer</span>
+            <strong id="confirmationCustomer">-</strong>
+          </div>
+          <div>
+            <span>Payment</span>
+            <strong id="confirmationPayment">-</strong>
+          </div>
+        </div>
+
+        <div class="confirmation-summary">
+          <h4>Receipt</h4>
+          <ul id="confirmationItems" class="confirmation-items"></ul>
+        </div>
+
+        <div class="confirmation-footer">
+          <div>
+            <span>Order sync</span>
+            <strong>Kitchen board updated</strong>
+          </div>
+          <strong id="confirmationTotal">₹0</strong>
+        </div>
+
+        <button class="primary-button" data-close="confirmationModal" type="button">Back to menu</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./app.js?v=20261026-1"></script>
+  </body>
+</html>
