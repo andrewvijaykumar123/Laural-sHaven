@@ -281,19 +281,36 @@ async function submitOrder(event) {
 }
 
 async function loadMenu() {
-  try {
-    const response = await fetch('/api/menu');
-    const result = await response.json();
-    state.menu = result.menu || [];
-    state.upiId = result.upiId || state.upiId;
-    state.upiName = result.upiName || state.upiName;
-    renderMenu();
-    renderCart();
-    renderQrCode();
-  } catch (error) {
-    console.error('Could not load menu:', error);
-    showToast('Menu is unavailable right now.');
+  const menuSources = ['/api/menu', './menu.json'];
+
+  for (const source of menuSources) {
+    try {
+      const response = await fetch(source);
+      if (!response.ok) {
+        continue;
+      }
+
+      const result = await response.json();
+      const menu = Array.isArray(result.menu) ? result.menu : Array.isArray(result) ? result : [];
+
+      if (!menu.length) {
+        continue;
+      }
+
+      state.menu = menu;
+      state.upiId = result.upiId || state.upiId;
+      state.upiName = result.upiName || state.upiName;
+      renderMenu();
+      renderCart();
+      renderQrCode();
+      return;
+    } catch (error) {
+      console.warn(`Menu fallback failed for ${source}:`, error);
+    }
   }
+
+  console.error('Could not load menu from API or bundled JSON.');
+  showToast('Menu is unavailable right now.');
 }
 
 function renderQrCode() {
@@ -302,8 +319,10 @@ function renderQrCode() {
   }
 
   const total = getOrderSummary().total || 0;
-  const qrUrl = `/api/qr?amount=${encodeURIComponent(total)}`;
-  elements.qrCodeImage.src = qrUrl;
+  const upiLink = `upi://pay?pa=${encodeURIComponent(state.upiId)}&pn=${encodeURIComponent(state.upiName)}&am=${Number(total || 0).toFixed(2)}&cu=INR&tn=${encodeURIComponent("Laural's Haven Order")}`;
+  const encodedUpi = encodeURIComponent(upiLink);
+
+  elements.qrCodeImage.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodedUpi}&size=300x300&ecc=M`;
   elements.qrCodeImage.alt = 'UPI QR code';
 }
 
