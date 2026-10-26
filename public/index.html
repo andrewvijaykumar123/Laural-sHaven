@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laural's Haven | Gourmet Ordering</title>
+    <meta
+      name="description"
+      content="Premium café ordering experience for Laural's Haven with UPI checkout and order email notifications."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <span class="brand-badge">LH</span>
+          <div>
+            <p class="eyebrow">Cafe | Lounge</p>
+            <h1>Laural's Haven</h1>
+          </div>
+        </div>
+        <button class="cart-trigger" id="cartTrigger" aria-label="Open cart">
+          <span>Cart</span>
+          <strong id="cartCount">0</strong>
+        </button>
+      </header>
+
+      <main class="main-layout">
+        <section class="hero">
+          <div class="hero-copy">
+            <span class="pill">Freshly prepared • Fast delivery</span>
+            <h2>Good food. Good vibes. Great company.</h2>
+            <p>
+              Explore the signature café menu, build your perfect meal, and checkout in a few taps using UPI.
+            </p>
+          </div>
+          <div class="hero-card">
+            <span>Today’s special</span>
+            <h3>Haven Fuel</h3>
+            <p>Mocha energy, creamy indulgence, and café comfort in one shake.</p>
+            <strong>₹159</strong>
+          </div>
+        </section>
+
+        <section class="menu-panel">
+          <div class="section-heading">
+            <div>
+              <p>Menu</p>
+              <h3>Curated for every mood</h3>
+            </div>
+            <button id="clearFilters" class="text-button">Reset</button>
+          </div>
+
+          <div id="menuContainer" class="menu-container" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <aside class="cart-panel" id="cartPanel" aria-label="Shopping cart">
+        <div class="cart-header">
+          <h3>Your order</h3>
+          <button id="closeCart" class="icon-button" aria-label="Close cart">×</button>
+        </div>
+
+        <div id="cartItems" class="cart-items"></div>
+
+        <div class="totals">
+          <div><span>Subtotal</span><strong id="subtotalValue">₹0</strong></div>
+          <div><span>Service fee</span><strong id="serviceFeeValue">₹0</strong></div>
+          <div class="grand-total"><span>Total</span><strong id="totalValue">₹0</strong></div>
+        </div>
+
+        <button id="checkoutButton" class="primary-button">Proceed to checkout</button>
+      </aside>
+    </div>
+
+    <div id="checkoutModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card checkout-card">
+        <div class="modal-header">
+          <h3>Checkout</h3>
+          <button class="icon-button" data-close="checkoutModal" aria-label="Close checkout">×</button>
+        </div>
+
+        <form id="checkoutForm" class="checkout-form">
+          <div class="field-group">
+            <label for="customerName">Full name</label>
+            <input id="customerName" name="customerName" type="text" placeholder="Enter your full name" required />
+          </div>
+
+          <div class="field-group two-up">
+            <div>
+              <label for="phone">Phone</label>
+              <input id="phone" name="phone" type="tel" placeholder="+91 98xxx xxxxx" required />
+            </div>
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" placeholder="you@example.com" />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="notes">Order notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Any special instructions?"></textarea>
+          </div>
+
+          <div class="payment-panel">
+            <p>Choose a payment method</p>
+            <div class="upi-options">
+              <button type="button" class="pill-option app-option" data-upi="gpay">Google Pay</button>
+              <button type="button" class="pill-option app-option" data-upi="phonepe">PhonePe</button>
+              <button type="button" class="pill-option app-option" data-upi="paytm">Paytm</button>
+              <button type="button" class="pill-option app-option" data-upi="bhim">BHIM UPI</button>
+              <button type="button" class="pill-option secondary" id="qrPaymentButton">Scan QR</button>
+            </div>
+          </div>
+
+          <div class="summary-box">
+            <div><span>Subtotal</span><strong id="checkoutSubtotal">₹0</strong></div>
+            <div><span>Service fee</span><strong id="checkoutServiceFee">₹0</strong></div>
+            <div class="grand-total"><span>Total</span><strong id="checkoutTotal">₹0</strong></div>
+          </div>
+
+          <button type="submit" class="primary-button">Place order</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="qrModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card qr-card">
+        <div class="modal-header">
+          <h3>Scan to pay</h3>
+          <button class="icon-button" data-close="qrModal" aria-label="Close QR scan">×</button>
+        </div>
+        <div class="qr-panel">
+          <div class="qr-frame">
+            <img id="qrCodeImage" alt="UPI QR code for payment" />
+          </div>
+          <div class="qr-meta">
+            <p>UPI ID: <strong>paytm.s1pl5v7@pty</strong></p>
+            <p>Accepted apps: GPay, PhonePe, Paytm, BHIM</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
