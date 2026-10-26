@@ -14,6 +14,16 @@ const state = {
   upiName: "Laural's Haven"
 };
 
+function getApiBase() {
+  const configuredBase = (window.LH_API_BASE || '').trim().replace(/\/$/, '');
+  return configuredBase || window.location.origin;
+}
+
+function apiUrl(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${getApiBase()}${normalizedPath}`;
+}
+
 const elements = {
   menuContainer: document.getElementById('menuContainer'),
   cartTrigger: document.getElementById('cartTrigger'),
@@ -273,7 +283,7 @@ async function submitOrder(event) {
       return;
     }
 
-    const response = await fetch('/api/checkout', {
+    const response = await fetch(apiUrl('/api/checkout'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -313,7 +323,7 @@ async function submitOrder(event) {
 }
 
 async function loadMenu() {
-  const menuSources = [`/api/menu?ts=${Date.now()}`, staticAssetUrl('./menu.json')];
+  const menuSources = [`${apiUrl('/api/menu')}?ts=${Date.now()}`, staticAssetUrl('./menu.json')];
 
   for (const source of menuSources) {
     try {
