@@ -1,3 +1,5 @@
+const ASSET_VERSION = '20261026-1';
+
 const cart = new Map();
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -44,6 +46,10 @@ const elements = {
   confirmationTotal: document.getElementById('confirmationTotal'),
   toast: document.getElementById('toast')
 };
+
+function staticAssetUrl(path) {
+  return `${path}?v=${ASSET_VERSION}`;
+}
 
 function formatCurrency(value) {
   return currencyFormatter.format(value);
@@ -281,11 +287,11 @@ async function submitOrder(event) {
 }
 
 async function loadMenu() {
-  const menuSources = ['/api/menu', './menu.json'];
+  const menuSources = [`/api/menu?ts=${Date.now()}`, staticAssetUrl('./menu.json')];
 
   for (const source of menuSources) {
     try {
-      const response = await fetch(source);
+      const response = await fetch(source, { cache: 'no-store' });
       if (!response.ok) {
         continue;
       }
