@@ -14,8 +14,6 @@ const state = {
   upiName: "Laural's Haven"
 };
 
-const OWNER_EMAIL = 'andrewvijaykumar123@gmail.com';
-
 const elements = {
   menuContainer: document.getElementById('menuContainer'),
   cartTrigger: document.getElementById('cartTrigger'),
@@ -247,14 +245,11 @@ async function submitOrder(event) {
   const payload = {
     customerName: formData.get('customerName'),
     phone: formData.get('phone'),
-    email: formData.get('email'),
     notes: formData.get('notes'),
     paymentMethod: state.selectedUPI || 'upi',
     transactionRef: `LH-${Date.now().toString().slice(-8)}`,
     items: orderSummary.items,
     subtotal: orderSummary.subtotal,
-    cgst: orderSummary.cgst,
-    sgst: orderSummary.sgst,
     total: orderSummary.total
   };
 
@@ -311,7 +306,7 @@ async function submitOrder(event) {
     closeModal(elements.qaModal);
     elements.checkoutForm.reset();
     state.selectedUPI = null;
-    showConfirmation(confirmedOrder, result.emailStatus || 'sent');
+    showConfirmation(confirmedOrder, 'synced');
   } catch (error) {
     showToast(error.message || 'Unable to place order.');
   }
@@ -363,14 +358,11 @@ function renderQrCode() {
   elements.qrCodeImage.alt = 'UPI QR code';
 }
 
-function showConfirmation(order, emailStatus = 'sent') {
+function showConfirmation(order, _status = 'synced') {
   if (!order) return;
 
   const items = order.items || [];
   const paymentText = order.paymentMethod ? order.paymentMethod.toUpperCase() : 'UPI';
-  const emailLabel = emailStatus === 'delivery_failed'
-    ? 'Email delivery failed from this network'
-    : `Email sent to ${OWNER_EMAIL}`;
 
   elements.confirmationOrderId.textContent = order.id || order.orderId || 'Processing';
   elements.confirmationTransaction.textContent = order.transactionRef || 'QR payment';
@@ -391,7 +383,7 @@ function showConfirmation(order, emailStatus = 'sent') {
 
   const footerText = elements.confirmationModal.querySelector('.confirmation-footer div strong');
   if (footerText) {
-    footerText.textContent = emailLabel;
+    footerText.textContent = 'Kitchen board updated';
   }
 
   openModal(elements.confirmationModal);

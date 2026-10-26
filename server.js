@@ -2,18 +2,29 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const DEFAULT_EMAIL_TO = 'andrewvijaykumar123@gmail.com';
 const UPI_ID = process.env.UPI_ID || 'paytm.s1pl5v7@pty';
 const UPI_NAME = process.env.UPI_NAME || "Laural's Haven";
 const STATUS_FLOW = ['pending', 'accepted', 'ready', 'delivered'];
 const orders = [];
 
 app.use(express.json({ limit: '1mb' }));
+app.use((error, _req, res, _next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid JSON payload. Please send a valid request body.'
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: 'Unexpected server error.'
+  });
+});
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -152,77 +163,6 @@ function createOrderId() {
   return `LH-${Date.now().toString().slice(-8)}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
-function makeTransport() {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    return null;
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
-    requireTLS: true,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000
-  });
-}
-
-function createEmailHtml(order) {
-  const itemRows = order.items
-    .map((item) => `
-      <tr>
-        <td style="padding:10px 8px; border-bottom:1px solid #e5e7eb;">${item.name}</td>
-        <td style="padding:10px 8px; border-bottom:1px solid #e5e7eb; text-align:center;">${item.qty}</td>
-        <td style="padding:10px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${item.price * item.qty}</td>
-      </tr>
-    `)
-    .join('');
-
-  return `
-    <div style="font-family:Arial,sans-serif;background:#f7f3ee;padding:32px;color:#111827;">
-      <div style="max-width:720px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;padding:24px 28px;">
-          <h2 style="margin:0;font-size:28px;">Laural's Haven</h2>
-          <p style="margin:8px 0 0; font-size:14px;">New restaurant order confirmation</p>
-        </div>
-        <div style="padding:28px;">
-          <p><strong>Order ID:</strong> ${order.id}</p>
-          <p><strong>Customer:</strong> ${order.customerName}</p>
-          <p><strong>Phone:</strong> ${order.phone}</p>
-          <p><strong>Email:</strong> ${order.email || 'Not provided'}</p>
-          <p><strong>Payment:</strong> ${order.paymentMethod}</p>
-          <p><strong>UPI ID:</strong> ${order.upiId}</p>
-          <p><strong>Transaction:</strong> ${order.transactionRef}</p>
-          <p><strong>Notes:</strong> ${order.notes || 'No notes'}</p>
-          <table style="width:100%;border-collapse:collapse;margin-top:18px;">
-            <thead>
-              <tr style="background:#f3f4f6;">
-                <th style="padding:12px 8px;text-align:left;">Item</th>
-                <th style="padding:12px 8px;text-align:center;">Qty</th>
-                <th style="padding:12px 8px;text-align:right;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
-          <div style="padding-top:18px; border-top:1px solid #e5e7eb; margin-top:18px; text-align:right;">
-            <p style="margin:6px 0;">Subtotal: ₹${order.subtotal}</p>
-            <p style="margin:6px 0; font-size:22px; font-weight:700;">Total: ₹${order.total}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function toPublicOrder(order) {
   return {
     ...order,
@@ -328,7 +268,6 @@ app.post('/api/checkout', async (req, res) => {
   const payload = req.body || {};
   const customerName = String(payload.customerName || '').trim();
   const phone = String(payload.phone || '').trim();
-  const email = String(payload.email || '').trim();
   const notes = String(payload.notes || '').trim();
   const paymentMethod = String(payload.paymentMethod || 'upi').trim();
   const orderItems = Array.isArray(payload.items) ? payload.items : [];
@@ -347,7 +286,6 @@ app.post('/api/checkout', async (req, res) => {
     id: createOrderId(),
     customerName,
     phone,
-    email,
     notes,
     paymentMethod,
     upiId: UPI_ID,
@@ -367,37 +305,10 @@ app.post('/api/checkout', async (req, res) => {
 
   orders.unshift(normalizedOrder);
 
-  const transporter = makeTransport();
-  if (transporter) {
-    try {
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: process.env.EMAIL_TO || DEFAULT_EMAIL_TO,
-        replyTo: email || process.env.SMTP_USER,
-        subject: `New order from ${customerName} - ${normalizedOrder.id}`,
-        html: createEmailHtml(normalizedOrder)
-      });
-      console.log('Order email sent to', process.env.EMAIL_TO || DEFAULT_EMAIL_TO);
-    } catch (error) {
-      console.error('Email send failed:', error.message || error);
-      return res.status(202).json({
-        success: true,
-        orderId: normalizedOrder.id,
-        paymentReference: normalizedOrder.transactionRef,
-        emailStatus: 'delivery_failed',
-        message: 'Order accepted, but the email notification could not be delivered. Please check SMTP configuration.',
-        order: toPublicOrder(normalizedOrder)
-      });
-    }
-  } else {
-    console.warn('SMTP is not configured. Order captured locally but no email was sent.');
-  }
-
   return res.status(200).json({
     success: true,
     orderId: normalizedOrder.id,
     paymentReference: normalizedOrder.transactionRef,
-    emailStatus: transporter ? 'queued' : 'not_configured',
     message: 'Order placed successfully. Please complete the UPI payment and keep the transaction reference for your receipt.',
     order: toPublicOrder(normalizedOrder)
   });
@@ -415,7 +326,5 @@ app.listen(PORT, () => {
   console.log(`Laural's Haven app is running on http://localhost:${PORT}`);
   console.log(`Admin console is available at http://localhost:${PORT}/admin`);
   console.log(`Configured UPI ID: ${UPI_ID}`);
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS in your .env file to enable order email delivery.');
-  }
+  console.log('Kitchen queue sync is active.');
 });

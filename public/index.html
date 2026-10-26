@@ -6,7 +6,7 @@
     <title>Laural's Haven | Gourmet Ordering</title>
     <meta
       name="description"
-      content="Premium café ordering experience for Laural's Haven with UPI checkout and order email notifications."
+      content="Premium café ordering experience for Laural's Haven with live UPI checkout and kitchen-ready order management."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -38,7 +38,7 @@
             <span class="pill">Freshly prepared • Fast delivery</span>
             <h2>Good food. Good vibes. Great company.</h2>
             <p>
-              Explore the signature café menu, build your perfect meal, and checkout in a few taps using UPI.
+              Explore the signature café menu, build your perfect meal, and check out in a few taps using UPI. Your order syncs live with the kitchen console.
             </p>
             <div class="feature-row" aria-label="Store highlights">
               <div class="feature-pill">
@@ -50,8 +50,8 @@
                 <span>daily made</span>
               </div>
               <div class="feature-pill">
-                <strong>UPI</strong>
-                <span>instant pay</span>
+                <strong>Live</strong>
+                <span>kitchen sync</span>
               </div>
             </div>
           </div>
@@ -61,7 +61,7 @@
             <p>Mocha energy, creamy indulgence, and café comfort in one shake.</p>
             <div class="hero-card-meta">
               <strong>₹159</strong>
-              <span>Most loved</span>
+              <span>No email required</span>
             </div>
           </div>
         </section>
@@ -109,21 +109,17 @@
             <input id="customerName" name="customerName" type="text" placeholder="Enter your full name" required />
           </div>
 
-          <div class="field-group two-up">
-            <div>
-              <label for="phone">Phone</label>
-              <input id="phone" name="phone" type="tel" placeholder="+91 98xxx xxxxx" required />
-            </div>
-            <div>
-              <label for="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="you@example.com" />
-            </div>
+          <div class="field-group">
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" placeholder="+91 98xxx xxxxx" required />
           </div>
 
           <div class="field-group">
             <label for="notes">Order notes</label>
             <textarea id="notes" name="notes" rows="3" placeholder="Any special instructions?"></textarea>
           </div>
+
+          <div class="mini-note">No email required. Your order is sent directly to the kitchen dashboard.</div>
 
           <div class="payment-panel">
             <p>Choose a payment method</p>
@@ -196,8 +192,8 @@
 
         <div class="confirmation-footer">
           <div>
-            <span>Email sent to</span>
-            <strong>andrewvijaykumar123@gmail.com</strong>
+            <span>Order sync</span>
+            <strong>Kitchen board updated</strong>
           </div>
           <strong id="confirmationTotal">₹0</strong>
         </div>
