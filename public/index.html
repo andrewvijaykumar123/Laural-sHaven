@@ -40,12 +40,29 @@
             <p>
               Explore the signature café menu, build your perfect meal, and checkout in a few taps using UPI.
             </p>
+            <div class="feature-row" aria-label="Store highlights">
+              <div class="feature-pill">
+                <strong>12 min</strong>
+                <span>average prep</span>
+              </div>
+              <div class="feature-pill">
+                <strong>Fresh</strong>
+                <span>daily made</span>
+              </div>
+              <div class="feature-pill">
+                <strong>UPI</strong>
+                <span>instant pay</span>
+              </div>
+            </div>
           </div>
           <div class="hero-card">
             <span>Today’s special</span>
             <h3>Haven Fuel</h3>
             <p>Mocha energy, creamy indulgence, and café comfort in one shake.</p>
-            <strong>₹159</strong>
+            <div class="hero-card-meta">
+              <strong>₹159</strong>
+              <span>Most loved</span>
+            </div>
           </div>
         </section>
 
@@ -72,7 +89,8 @@
 
         <div class="totals">
           <div><span>Subtotal</span><strong id="subtotalValue">₹0</strong></div>
-          <div><span>Service fee</span><strong id="serviceFeeValue">₹0</strong></div>
+          <div><span>GST included</span><strong id="serviceFeeValue">Included</strong></div>
+          <div><span>Final amount</span><strong id="sgstValue">₹0</strong></div>
           <div class="grand-total"><span>Total</span><strong id="totalValue">₹0</strong></div>
         </div>
 
@@ -122,7 +140,8 @@
 
           <div class="summary-box">
             <div><span>Subtotal</span><strong id="checkoutSubtotal">₹0</strong></div>
-            <div><span>Service fee</span><strong id="checkoutServiceFee">₹0</strong></div>
+            <div><span>GST included</span><strong id="checkoutServiceFee">Included</strong></div>
+            <div><span>Final amount</span><strong id="checkoutSgst">₹0</strong></div>
             <div class="grand-total"><span>Total</span><strong id="checkoutTotal">₹0</strong></div>
           </div>
 
@@ -146,6 +165,48 @@
             <p>Accepted apps: GPay, PhonePe, Paytm, BHIM</p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="confirmationModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card confirmation-card">
+        <div class="success-badge">✓</div>
+        <p class="confirm-kicker">Payment received</p>
+        <h3>Order confirmed</h3>
+
+        <div class="confirmation-grid">
+          <div>
+            <span>Order ID</span>
+            <strong id="confirmationOrderId">-</strong>
+          </div>
+          <div>
+            <span>Transaction</span>
+            <strong id="confirmationTransaction">-</strong>
+          </div>
+          <div>
+            <span>Customer</span>
+            <strong id="confirmationCustomer">-</strong>
+          </div>
+          <div>
+            <span>Payment</span>
+            <strong id="confirmationPayment">-</strong>
+          </div>
+        </div>
+
+        <div class="confirmation-summary">
+          <h4>Receipt</h4>
+          <ul id="confirmationItems" class="confirmation-items"></ul>
+        </div>
+
+        <div class="confirmation-footer">
+          <div>
+            <span>Email sent to</span>
+            <strong>andrewvijaykumar123@gmail.com</strong>
+          </div>
+          <strong id="confirmationTotal">₹0</strong>
+        </div>
+
+        <button class="primary-button" data-close="confirmationModal" type="button">Back to menu</button>
       </div>
     </div>
 

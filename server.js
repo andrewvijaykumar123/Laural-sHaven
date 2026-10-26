@@ -7,7 +7,7 @@ const QRCode = require('qrcode');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const DEFAULT_EMAIL_TO = 'Havenlaurals06@gmail.com';
+const DEFAULT_EMAIL_TO = 'andrewvijaykumar123@gmail.com';
 const UPI_ID = process.env.UPI_ID || 'paytm.s1pl5v7@pty';
 const UPI_NAME = process.env.UPI_NAME || "Laural's Haven";
 
@@ -199,10 +199,9 @@ function buildOrderSummary(items) {
   }));
 
   const subtotal = orderLines.reduce((sum, line) => sum + line.subtotal, 0);
-  const serviceFee = subtotal > 0 ? Math.round(subtotal * 0.05) : 0;
-  const total = subtotal + serviceFee;
+  const total = subtotal;
 
-  return { orderLines, subtotal, serviceFee, total };
+  return { orderLines, subtotal, total };
 }
 
 function makeTransport() {
@@ -218,7 +217,14 @@ function makeTransport() {
     host,
     port: Number(process.env.SMTP_PORT || 587),
     secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
-    auth: { user, pass }
+    requireTLS: true,
+    auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000
   });
 }
 
@@ -263,7 +269,7 @@ function createEmailHtml(order) {
           </table>
           <div style="padding-top:18px; border-top:1px solid #e5e7eb; margin-top:18px; text-align:right;">
             <p style="margin:6px 0;">Subtotal: ₹${order.subtotal}</p>
-            <p style="margin:6px 0;">Service fee: ₹${order.serviceFee}</p>
+            <p style="margin:6px 0;">GST included in listed prices</p>
             <p style="margin:6px 0; font-size:22px; font-weight:700;">Total: ₹${order.total}</p>
           </div>
         </div>
@@ -311,8 +317,9 @@ app.post('/api/checkout', async (req, res) => {
   const orderItems = Array.isArray(payload.items) ? payload.items : [];
   const transactionRef = String(payload.transactionRef || `LH-${crypto.randomBytes(6).toString('hex').toUpperCase()}`);
   const subtotal = Number(payload.subtotal || 0);
-  const serviceFee = Number(payload.serviceFee || 0);
-  const total = Number(payload.total || subtotal + serviceFee);
+  const cgst = 0;
+  const sgst = 0;
+  const total = Number(payload.total || subtotal);
 
   if (!customerName || !phone || orderItems.length === 0) {
     return res.status(400).json({
@@ -337,7 +344,8 @@ app.post('/api/checkout', async (req, res) => {
       price: Number(item.price || 0)
     })),
     subtotal,
-    serviceFee,
+    cgst,
+    sgst,
     total
   };
 
@@ -348,6 +356,7 @@ app.post('/api/checkout', async (req, res) => {
       await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: process.env.EMAIL_TO || DEFAULT_EMAIL_TO,
+        replyTo: email || process.env.SMTP_USER,
         subject: `New order from ${customerName} - ${normalizedOrder.id}`,
         html: createEmailHtml(normalizedOrder)
       });

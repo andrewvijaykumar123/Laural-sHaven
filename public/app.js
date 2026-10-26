@@ -12,6 +12,8 @@ const state = {
   upiName: "Laural's Haven"
 };
 
+const OWNER_EMAIL = 'andrewvijaykumar123@gmail.com';
+
 const elements = {
   menuContainer: document.getElementById('menuContainer'),
   cartTrigger: document.getElementById('cartTrigger'),
@@ -21,16 +23,25 @@ const elements = {
   cartCount: document.getElementById('cartCount'),
   subtotalValue: document.getElementById('subtotalValue'),
   serviceFeeValue: document.getElementById('serviceFeeValue'),
+  sgstValue: document.getElementById('sgstValue'),
   totalValue: document.getElementById('totalValue'),
   checkoutButton: document.getElementById('checkoutButton'),
   checkoutModal: document.getElementById('checkoutModal'),
   qaModal: document.getElementById('qrModal'),
   checkoutSubtotal: document.getElementById('checkoutSubtotal'),
   checkoutServiceFee: document.getElementById('checkoutServiceFee'),
+  checkoutSgst: document.getElementById('checkoutSgst'),
   checkoutTotal: document.getElementById('checkoutTotal'),
   checkoutForm: document.getElementById('checkoutForm'),
   qrPaymentButton: document.getElementById('qrPaymentButton'),
   qrCodeImage: document.getElementById('qrCodeImage'),
+  confirmationModal: document.getElementById('confirmationModal'),
+  confirmationOrderId: document.getElementById('confirmationOrderId'),
+  confirmationTransaction: document.getElementById('confirmationTransaction'),
+  confirmationCustomer: document.getElementById('confirmationCustomer'),
+  confirmationPayment: document.getElementById('confirmationPayment'),
+  confirmationItems: document.getElementById('confirmationItems'),
+  confirmationTotal: document.getElementById('confirmationTotal'),
   toast: document.getElementById('toast')
 };
 
@@ -57,10 +68,9 @@ function getOrderSummary() {
   }));
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const serviceFee = subtotal > 0 ? Math.round(subtotal * 0.05) : 0;
-  const total = subtotal + serviceFee;
+  const total = subtotal;
 
-  return { items, subtotal, serviceFee, total };
+  return { items, subtotal, cgst: 0, sgst: 0, total };
 }
 
 function renderCart() {
@@ -69,10 +79,12 @@ function renderCart() {
 
   elements.cartCount.textContent = items.reduce((sum, item) => sum + item.qty, 0);
   elements.subtotalValue.textContent = formatCurrency(orderSummary.subtotal);
-  elements.serviceFeeValue.textContent = formatCurrency(orderSummary.serviceFee);
+  elements.serviceFeeValue.textContent = 'Included';
+  elements.sgstValue.textContent = formatCurrency(orderSummary.total);
   elements.totalValue.textContent = formatCurrency(orderSummary.total);
   elements.checkoutSubtotal.textContent = formatCurrency(orderSummary.subtotal);
-  elements.checkoutServiceFee.textContent = formatCurrency(orderSummary.serviceFee);
+  elements.checkoutServiceFee.textContent = 'Included';
+  elements.checkoutSgst.textContent = formatCurrency(orderSummary.total);
   elements.checkoutTotal.textContent = formatCurrency(orderSummary.total);
   renderQrCode();
 
@@ -107,13 +119,14 @@ function renderCart() {
 }
 
 function addItemToCart(item) {
+  const quantity = Number(item.qty || 1);
   const existing = cart.get(item.id);
 
   if (existing) {
-    existing.qty += 1;
+    existing.qty += quantity;
     cart.set(item.id, existing);
   } else {
-    cart.set(item.id, { ...item, qty: 1 });
+    cart.set(item.id, { ...item, qty: quantity });
   }
 
   renderCart();
@@ -147,11 +160,13 @@ function buildMenuCards(menu) {
               .map(
                 (item) => `
                   <div class="menu-item">
-                    <div>
+                    <div class="menu-item-copy">
                       <h5>${item.name}</h5>
                     </div>
                     <span class="item-price">${formatCurrency(item.price)}</span>
-                    <button type="button" class="add-button" data-add-id="${item.id}" data-name="${item.name}" data-price="${item.price}">Add</button>
+                    <div class="menu-item-actions">
+                      <button type="button" class="add-button" data-add-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-qty="1">Add</button>
+                    </div>
                   </div>
                 `
               )
@@ -227,7 +242,8 @@ async function submitOrder(event) {
     transactionRef: `LH-${Date.now().toString().slice(-8)}`,
     items: orderSummary.items,
     subtotal: orderSummary.subtotal,
-    serviceFee: orderSummary.serviceFee,
+    cgst: orderSummary.cgst,
+    sgst: orderSummary.sgst,
     total: orderSummary.total
   };
 
@@ -244,11 +260,21 @@ async function submitOrder(event) {
       throw new Error(result.message || 'Unable to place order.');
     }
 
-    showToast(`Order placed successfully • ${result.orderId}`);
+    const confirmedOrder = {
+      ...payload,
+      id: result.orderId || `LH-${Date.now().toString().slice(-8)}`,
+      transactionRef: result.paymentReference || payload.transactionRef,
+      total: Number(payload.total || result.order?.total || 0),
+      items: payload.items || result.order?.items || []
+    };
+
+    showToast(`Order placed successfully • ${confirmedOrder.id}`);
     clearCart();
     closeModal(elements.checkoutModal);
+    closeModal(elements.qaModal);
     elements.checkoutForm.reset();
     state.selectedUPI = null;
+    showConfirmation(confirmedOrder, result.emailStatus || 'sent');
   } catch (error) {
     showToast(error.message || 'Unable to place order.');
   }
@@ -281,6 +307,40 @@ function renderQrCode() {
   elements.qrCodeImage.alt = 'UPI QR code';
 }
 
+function showConfirmation(order, emailStatus = 'sent') {
+  if (!order) return;
+
+  const items = order.items || [];
+  const paymentText = order.paymentMethod ? order.paymentMethod.toUpperCase() : 'UPI';
+  const emailLabel = emailStatus === 'delivery_failed'
+    ? 'Email delivery failed from this network'
+    : `Email sent to ${OWNER_EMAIL}`;
+
+  elements.confirmationOrderId.textContent = order.id || order.orderId || 'Processing';
+  elements.confirmationTransaction.textContent = order.transactionRef || 'QR payment';
+  elements.confirmationCustomer.textContent = order.customerName || 'Guest';
+  elements.confirmationPayment.textContent = paymentText;
+  elements.confirmationTotal.textContent = formatCurrency(order.total || 0);
+  elements.confirmationItems.innerHTML = items
+    .map(
+      (item) => `
+        <li>
+          <span>${item.name}</span>
+          <span>${item.qty}x</span>
+          <span>${formatCurrency((Number(item.price) || 0) * (Number(item.qty) || 1))}</span>
+        </li>
+      `
+    )
+    .join('');
+
+  const footerText = elements.confirmationModal.querySelector('.confirmation-footer div strong');
+  if (footerText) {
+    footerText.textContent = emailLabel;
+  }
+
+  openModal(elements.confirmationModal);
+}
+
 function attachEvents() {
   document.addEventListener('click', (event) => {
     const addButton = event.target.closest('[data-add-id]');
@@ -288,7 +348,8 @@ function attachEvents() {
       addItemToCart({
         id: addButton.dataset.addId,
         name: addButton.dataset.name,
-        price: Number(addButton.dataset.price)
+        price: Number(addButton.dataset.price),
+        qty: Number(addButton.dataset.qty || 1)
       });
       return;
     }
