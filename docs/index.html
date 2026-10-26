@@ -4,11 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Laural's Haven | Gourmet Ordering</title>
-    <meta name="description" content="Luxury café ordering experience for Laural's Haven." />
+    <meta
+      name="description"
+      content="Premium café ordering experience for Laural's Haven with UPI checkout and order email notifications."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
@@ -29,15 +35,34 @@
       <main class="main-layout">
         <section class="hero">
           <div class="hero-copy">
-            <span class="pill">Freshly prepared • Fast service</span>
+            <span class="pill">Freshly prepared • Fast delivery</span>
             <h2>Good food. Good vibes. Great company.</h2>
-            <p>Curated café favourites, crafted comfort meals, and a premium checkout experience with UPI and QR payment options.</p>
+            <p>
+              Explore the signature café menu, build your perfect meal, and checkout in a few taps using UPI.
+            </p>
+            <div class="feature-row" aria-label="Store highlights">
+              <div class="feature-pill">
+                <strong>12 min</strong>
+                <span>average prep</span>
+              </div>
+              <div class="feature-pill">
+                <strong>Fresh</strong>
+                <span>daily made</span>
+              </div>
+              <div class="feature-pill">
+                <strong>UPI</strong>
+                <span>instant pay</span>
+              </div>
+            </div>
           </div>
           <div class="hero-card">
             <span>Today’s special</span>
             <h3>Haven Fuel</h3>
             <p>Mocha energy, creamy indulgence, and café comfort in one shake.</p>
-            <strong>₹159</strong>
+            <div class="hero-card-meta">
+              <strong>₹159</strong>
+              <span>Most loved</span>
+            </div>
           </div>
         </section>
 
@@ -45,10 +70,11 @@
           <div class="section-heading">
             <div>
               <p>Menu</p>
-              <h3>World class café menu</h3>
+              <h3>Curated for every mood</h3>
             </div>
             <button id="clearFilters" class="text-button">Reset</button>
           </div>
+
           <div id="menuContainer" class="menu-container" aria-live="polite"></div>
         </section>
       </main>
@@ -63,7 +89,8 @@
 
         <div class="totals">
           <div><span>Subtotal</span><strong id="subtotalValue">₹0</strong></div>
-          <div><span>Service fee</span><strong id="serviceFeeValue">₹0</strong></div>
+          <div><span>GST included</span><strong id="serviceFeeValue">Included</strong></div>
+          <div><span>Final amount</span><strong id="sgstValue">₹0</strong></div>
           <div class="grand-total"><span>Total</span><strong id="totalValue">₹0</strong></div>
         </div>
 
@@ -113,7 +140,8 @@
 
           <div class="summary-box">
             <div><span>Subtotal</span><strong id="checkoutSubtotal">₹0</strong></div>
-            <div><span>Service fee</span><strong id="checkoutServiceFee">₹0</strong></div>
+            <div><span>GST included</span><strong id="checkoutServiceFee">Included</strong></div>
+            <div><span>Final amount</span><strong id="checkoutSgst">₹0</strong></div>
             <div class="grand-total"><span>Total</span><strong id="checkoutTotal">₹0</strong></div>
           </div>
 
@@ -130,7 +158,7 @@
         </div>
         <div class="qr-panel">
           <div class="qr-frame">
-            <img id="qrCodeImage" alt="UPI QR code" />
+            <img id="qrCodeImage" alt="UPI QR code for payment" />
           </div>
           <div class="qr-meta">
             <p>UPI ID: <strong>paytm.s1pl5v7@pty</strong></p>
@@ -140,7 +168,50 @@
       </div>
     </div>
 
+    <div id="confirmationModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card confirmation-card">
+        <div class="success-badge">✓</div>
+        <p class="confirm-kicker">Payment received</p>
+        <h3>Order confirmed</h3>
+
+        <div class="confirmation-grid">
+          <div>
+            <span>Order ID</span>
+            <strong id="confirmationOrderId">-</strong>
+          </div>
+          <div>
+            <span>Transaction</span>
+            <strong id="confirmationTransaction">-</strong>
+          </div>
+          <div>
+            <span>Customer</span>
+            <strong id="confirmationCustomer">-</strong>
+          </div>
+          <div>
+            <span>Payment</span>
+            <strong id="confirmationPayment">-</strong>
+          </div>
+        </div>
+
+        <div class="confirmation-summary">
+          <h4>Receipt</h4>
+          <ul id="confirmationItems" class="confirmation-items"></ul>
+        </div>
+
+        <div class="confirmation-footer">
+          <div>
+            <span>Email sent to</span>
+            <strong>andrewvijaykumar123@gmail.com</strong>
+          </div>
+          <strong id="confirmationTotal">₹0</strong>
+        </div>
+
+        <button class="primary-button" data-close="confirmationModal" type="button">Back to menu</button>
+      </div>
+    </div>
+
     <div id="toast" class="toast"></div>
-    <script src="./app.js"></script>
+
+    <script src="/app.js"></script>
   </body>
 </html>
