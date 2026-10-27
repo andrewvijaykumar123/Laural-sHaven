@@ -224,11 +224,16 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
   .toasts{bottom:5.5rem}
 }
 @media (max-width:380px){
+  .diet button{padding:.5625rem .625rem;gap:.35rem;white-space:nowrap}
   .topbar{padding-inline:.625rem;gap:.5rem}.top-actions{gap:.3rem}
   .brand{gap:.5rem}.brand span:last-child{font-size:.95rem}.brand-mark{width:2rem;height:2rem;font-size:1rem}
   .stats{gap:1rem}
 }
+@media (max-width:430px){
+  .diet button{white-space:nowrap;padding-inline:.7rem;gap:.375rem}
+}
 @media (max-width:340px){
+  .diet button{padding:.5625rem .5rem;gap:.3rem;font-size:.8rem}
   .brand{min-width:0;flex:1 1 auto}.brand span:last-child{font-size:.85rem;line-height:1.15}
   .top-actions{flex:0 0 auto;gap:.25rem}.icon-btn{width:2.25rem;height:2.25rem}
   .cart-btn{padding:0 .5rem;height:2.25rem;gap:.3rem}.live-pill{padding:.35rem}
