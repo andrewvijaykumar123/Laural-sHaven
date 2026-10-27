@@ -1,4 +1,4 @@
-const ASSET_VERSION = '20261027-fix';
+const ASSET_VERSION = '20261027-layout-fix';
 
 const cart = new Map();
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
@@ -11,48 +11,47 @@ const state = {
   menu: [],
   selectedUPI: null,
   upiId: 'paytm.s1pl5v7@pty',
-  upiName: "Laural's Haven"
-};
-
-const STORAGE_KEYS = {
-  menu: 'lauralsHavenFallbackMenu',
-  orders: 'lauralsHavenFallbackOrders'
-};
-
-function readStoredOrders() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.orders);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    return [];
+  upiName: "Laural's Haven",
+  filters: {
+    query: '',
+    category: 'all',
+    sort: 'featured'
   }
-}
+};
 
-function writeStoredOrders(orders) {
-  localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
-}
+const POPULAR_ITEMS = new Set(['haven-fuel', 'mocha-mist', 'paneer-sandwich', 'chicken-burger', 'veg-momos']);
 
-function saveOfflineOrder(payload, forceId = null) {
-  const order = {
-    id: forceId || `LH-${Date.now().toString().slice(-8)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-    customerName: payload.customerName || 'Guest',
-    phone: payload.phone || '—',
-    notes: payload.notes || '',
-    paymentMethod: payload.paymentMethod || 'upi',
-    transactionRef: payload.transactionRef || `LH-${Date.now().toString().slice(-8)}`,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    items: Array.isArray(payload.items) ? payload.items : [],
-    subtotal: Number(payload.subtotal || 0),
-    total: Number(payload.total || payload.subtotal || 0)
-  };
+async function fetchJsonWithRetry(path, options = {}, retries = 3) {
+  let lastError;
 
-  const orders = readStoredOrders();
-  orders.unshift(order);
-  writeStoredOrders(orders);
-  return order;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(apiUrl(path), {
+        cache: 'no-store',
+        ...options
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError = {};
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch (error) {
+          parsedError = {};
+        }
+        throw new Error(parsedError.message || `Request failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+      }
+    }
+  }
+
+  throw lastError || new Error('API request failed.');
 }
 
 function getApiBase() {
@@ -86,6 +85,9 @@ function hasConfiguredBackend() {
 
 const elements = {
   menuContainer: document.getElementById('menuContainer'),
+  menuSearch: document.getElementById('menuSearch'),
+  menuSort: document.getElementById('menuSort'),
+  categoryFilters: document.getElementById('categoryFilters'),
   cartTrigger: document.getElementById('cartTrigger'),
   cartPanel: document.getElementById('cartPanel'),
   closeCart: document.getElementById('closeCart'),
@@ -238,11 +240,15 @@ function buildMenuCards(menu) {
             ${section.items
               .map(
                 (item) => `
-                  <div class="menu-item">
+                  <div class="menu-item ${POPULAR_ITEMS.has(item.id) ? 'popular-item' : ''}">
                     <div class="menu-item-copy">
                       <h5>${item.name}</h5>
+                      ${POPULAR_ITEMS.has(item.id) ? '<span class="popular-badge">Popular</span>' : ''}
                     </div>
-                    <span class="item-price">${formatCurrency(item.price)}</span>
+                    <div class="menu-item-meta">
+                      <span class="item-price">${formatCurrency(item.price)}</span>
+                      <span class="item-tag">${section.category}</span>
+                    </div>
                     <div class="menu-item-actions">
                       <button type="button" class="add-button" data-add-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-qty="1">Add</button>
                     </div>
@@ -257,8 +263,55 @@ function buildMenuCards(menu) {
     .join('');
 }
 
+function getVisibleMenu() {
+  const query = state.filters.query.trim().toLowerCase();
+  const sorted = [...state.menu].map((section) => ({
+    ...section,
+    items: [...section.items]
+  }));
+
+  const filteredSections = sorted.map((section) => {
+    const items = section.items.filter((item) => {
+      const matchesCategory = state.filters.category === 'all' || section.category.toLowerCase() === state.filters.category.toLowerCase();
+      const matchesSearch = !query || item.name.toLowerCase().includes(query) || section.category.toLowerCase().includes(query);
+      return matchesCategory && matchesSearch;
+    });
+
+    return { ...section, items };
+  }).filter((section) => section.items.length > 0);
+
+  filteredSections.forEach((section) => {
+    const sortMode = state.filters.sort;
+    section.items.sort((a, b) => {
+      if (sortMode === 'price-low') return a.price - b.price;
+      if (sortMode === 'price-high') return b.price - a.price;
+      if (sortMode === 'name') return a.name.localeCompare(b.name);
+      return (POPULAR_ITEMS.has(b.id) ? 1 : 0) - (POPULAR_ITEMS.has(a.id) ? 1 : 0) || a.name.localeCompare(b.name);
+    });
+  });
+
+  return filteredSections;
+}
+
 function renderMenu() {
-  elements.menuContainer.innerHTML = buildMenuCards(state.menu);
+  const sections = getVisibleMenu();
+  if (!sections.length) {
+    elements.menuContainer.innerHTML = '<div class="empty-cart">No dishes match your search. Try another keyword or filter.</div>';
+    return;
+  }
+
+  elements.menuContainer.innerHTML = buildMenuCards(sections);
+}
+
+function renderCategoryFilters() {
+  const categories = ['all', ...state.menu.map((section) => section.category)];
+  elements.categoryFilters.innerHTML = categories
+    .map((category) => {
+      const selected = state.filters.category === category;
+      const label = category === 'all' ? 'All' : category;
+      return `<button type="button" class="category-filter ${selected ? 'active' : ''}" data-category="${category}">${label}</button>`;
+    })
+    .join('');
 }
 
 function openModal(modalElement) {
@@ -359,64 +412,31 @@ async function submitOrder(event) {
     state.selectedUPI = null;
     showConfirmation(confirmedOrder, 'synced');
   } catch (error) {
-    const offlineOrder = saveOfflineOrder(payload);
-    showToast(`Offline order saved • ${offlineOrder.id}`);
-    clearCart();
-    closeModal(elements.checkoutModal);
-    closeModal(elements.qaModal);
-    elements.checkoutForm.reset();
-    state.selectedUPI = null;
-    showConfirmation(offlineOrder, 'offline');
+    console.error('Checkout failed:', error);
+    showToast('Live API connection failed. Please try again later.');
   }
 }
 
 async function loadMenu() {
-  const menuSources = [`${apiUrl('/api/menu')}?ts=${Date.now()}`, staticAssetUrl('./menu.json')];
-
-  for (const source of menuSources) {
-    try {
-      const response = await fetch(source, { cache: 'no-store' });
-      if (!response.ok) {
-        continue;
-      }
-
-      const result = await response.json();
-      const menu = Array.isArray(result.menu) ? result.menu : Array.isArray(result) ? result : [];
-
-      if (!menu.length) {
-        continue;
-      }
-
-      state.menu = menu;
-      state.upiId = result.upiId || state.upiId;
-      state.upiName = result.upiName || state.upiName;
-      localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify({ menu, upiId: state.upiId, upiName: state.upiName }));
-      renderMenu();
-      renderCart();
-      renderQrCode();
-      return;
-    } catch (error) {
-      console.warn(`Menu fallback failed for ${source}:`, error);
-    }
-  }
-
   try {
-    const fallback = JSON.parse(localStorage.getItem(STORAGE_KEYS.menu) || 'null');
-    if (fallback && Array.isArray(fallback.menu) && fallback.menu.length) {
-      state.menu = fallback.menu;
-      state.upiId = fallback.upiId || state.upiId;
-      state.upiName = fallback.upiName || state.upiName;
-      renderMenu();
-      renderCart();
-      renderQrCode();
-      return;
-    }
-  } catch (error) {
-    console.warn('Local menu fallback failed:', error);
-  }
+    const result = await fetchJsonWithRetry('/api/menu');
+    const menu = Array.isArray(result.menu) ? result.menu : [];
 
-  console.error('Could not load menu from API or bundled JSON.');
-  showToast('Menu is unavailable right now.');
+    if (!menu.length) {
+      throw new Error('Menu payload was empty.');
+    }
+
+    state.menu = menu;
+    state.upiId = result.upiId || state.upiId;
+    state.upiName = result.upiName || state.upiName;
+    renderMenu();
+    renderCart();
+    renderQrCode();
+  } catch (error) {
+    console.error('Could not load menu from API.', error);
+    showToast('Menu is unavailable right now.');
+    elements.menuContainer.innerHTML = '<div class="empty-cart">The live menu service is unavailable right now.</div>';
+  }
 }
 
 function renderQrCode() {
@@ -497,6 +517,14 @@ function attachEvents() {
       return;
     }
 
+    const categoryButton = event.target.closest('[data-category]');
+    if (categoryButton) {
+      state.filters.category = categoryButton.dataset.category;
+      renderCategoryFilters();
+      renderMenu();
+      return;
+    }
+
     if (event.target.id === 'checkoutButton') {
       if (getOrderSummary().items.length === 0) {
         showToast('Add an item to the cart first.');
@@ -518,10 +546,30 @@ function attachEvents() {
     }
 
     if (event.target.id === 'clearFilters') {
-      clearCart();
-      showToast('Cart cleared.');
+      state.filters.query = '';
+      state.filters.category = 'all';
+      state.filters.sort = 'featured';
+      if (elements.menuSearch) elements.menuSearch.value = '';
+      if (elements.menuSort) elements.menuSort.value = 'featured';
+      renderCategoryFilters();
+      renderMenu();
+      showToast('Filters reset.');
     }
   });
+
+  if (elements.menuSearch) {
+    elements.menuSearch.addEventListener('input', (event) => {
+      state.filters.query = event.target.value;
+      renderMenu();
+    });
+  }
+
+  if (elements.menuSort) {
+    elements.menuSort.addEventListener('change', (event) => {
+      state.filters.sort = event.target.value;
+      renderMenu();
+    });
+  }
 
   elements.checkoutForm.addEventListener('submit', submitOrder);
   document.addEventListener('keydown', (event) => {
@@ -530,6 +578,7 @@ function attachEvents() {
       closeModal(elements.qaModal);
     }
   });
+
 }
 
 attachEvents();

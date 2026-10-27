@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20261027-fix" />
+    <link rel="stylesheet" href="./styles.css?v=20261027-layout-fix" />
   </head>
   <body>
     <div class="page-shell">
@@ -75,25 +75,44 @@
             <button id="clearFilters" class="text-button">Reset</button>
           </div>
 
+          <div class="filter-toolbar">
+            <label class="search-box">
+              <span class="sr-only">Search menu</span>
+              <input id="menuSearch" type="search" placeholder="Search a dish, combo, or drink" />
+            </label>
+
+            <div id="categoryFilters" class="category-filters" aria-label="Menu categories"></div>
+
+            <label class="sort-box">
+              <span>Sort</span>
+              <select id="menuSort">
+                <option value="featured">Featured</option>
+                <option value="price-low">Price: Low to high</option>
+                <option value="price-high">Price: High to low</option>
+                <option value="name">Name</option>
+              </select>
+            </label>
+          </div>
+
           <div id="menuContainer" class="menu-container" aria-live="polite"></div>
         </section>
+
+        <aside class="cart-panel" id="cartPanel" aria-label="Shopping cart">
+          <div class="cart-header">
+            <h3>Your order</h3>
+            <button id="closeCart" class="icon-button" aria-label="Close cart">×</button>
+          </div>
+
+          <div id="cartItems" class="cart-items"></div>
+
+          <div class="totals">
+            <div><span>Subtotal</span><strong id="subtotalValue">₹0</strong></div>
+            <div class="grand-total"><span>Total</span><strong id="totalValue">₹0</strong></div>
+          </div>
+
+          <button id="checkoutButton" class="primary-button">Proceed to checkout</button>
+        </aside>
       </main>
-
-      <aside class="cart-panel" id="cartPanel" aria-label="Shopping cart">
-        <div class="cart-header">
-          <h3>Your order</h3>
-          <button id="closeCart" class="icon-button" aria-label="Close cart">×</button>
-        </div>
-
-        <div id="cartItems" class="cart-items"></div>
-
-        <div class="totals">
-          <div><span>Subtotal</span><strong id="subtotalValue">₹0</strong></div>
-          <div class="grand-total"><span>Total</span><strong id="totalValue">₹0</strong></div>
-        </div>
-
-        <button id="checkoutButton" class="primary-button">Proceed to checkout</button>
-      </aside>
     </div>
 
     <div id="checkoutModal" class="modal hidden" aria-modal="true" role="dialog">
@@ -209,6 +228,6 @@
       const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
       window.LH_API_BASE = window.LH_API_BASE || (isLocalHost ? 'http://localhost:3000' : 'https://laurals-haven-api.onrender.com');
     </script>
-    <script src="./app.js?v=20261027-fix"></script>
+    <script src="./app.js?v=20261027-layout-fix"></script>
   </body>
 </html>
