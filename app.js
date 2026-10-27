@@ -22,6 +22,12 @@ const state = {
 const POPULAR_ITEMS = new Set(['haven-fuel', 'mocha-mist', 'paneer-sandwich', 'chicken-burger', 'veg-momos']);
 
 async function fetchJsonWithRetry(path, options = {}, retries = 3) {
+  const fallbackMap = {
+    '/api/menu': ['./menu.json'],
+    '/api/admin/summary': ['./dashboard.json'],
+    '/api/orders': ['./dashboard.json']
+  };
+
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -45,6 +51,22 @@ async function fetchJsonWithRetry(path, options = {}, retries = 3) {
       return await response.json();
     } catch (error) {
       lastError = error;
+
+      const fallbackUrls = fallbackMap[path] || [];
+      for (const fallbackUrl of fallbackUrls) {
+        try {
+          const fallbackResponse = await fetch(fallbackUrl, {
+            cache: 'no-store',
+            ...options
+          });
+          if (fallbackResponse.ok) {
+            return await fallbackResponse.json();
+          }
+        } catch (fallbackError) {
+          // Fall through to retry logic below.
+        }
+      }
+
       if (attempt < retries) {
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
       }

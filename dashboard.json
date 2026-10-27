@@ -1,0 +1,10 @@
+{
+  "summary": {
+    "totalRevenue": 0,
+    "totalOrders": 0,
+    "pendingOrders": 0,
+    "deliveredOrders": 0,
+    "popularItems": []
+  },
+  "orders": []
+}
