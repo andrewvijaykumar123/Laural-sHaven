@@ -21,7 +21,11 @@
 
   cart = Object.fromEntries(Object.entries(cart).filter(([id, q]) => ITEMS.has(id) && q > 0 && q <= 25));
   const saveCart = () => store.set('cart', cart);
-  const saveOrders = () => store.set('orders', orders.slice(0, 25));
+  const saveOrders = () => {
+    store.set('orders', orders.slice(0, 25));
+    LH.watch(orders.filter((o) => !['completed', 'rejected'].includes(o.status)).map((o) => o.id));
+  };
+  saveOrders();
   const isOut = (id) => LH.getCfg().oos.includes(id);
   const cartLines = () => Object.entries(cart).map(([id, qty]) => ({ item: ITEMS.get(id), qty }));
   const cartCount = () => Object.values(cart).reduce((a, b) => a + b, 0);
