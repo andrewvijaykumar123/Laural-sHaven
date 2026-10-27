@@ -9,6 +9,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const UPI_ID = process.env.UPI_ID || 'paytm.s1pl5v7@pty';
 const UPI_NAME = process.env.UPI_NAME || "Laural's Haven";
 const STATUS_FLOW = ['pending', 'accepted', 'ready', 'delivered'];
+const FALLBACK_PORTS = [3000, 3001, 3002, 8001, 8002];
 const defaultAllowedOrigins = [
   'https://andrewvijaykumar123.github.io',
   'https://andrewvijaykumar123.github.io/Laural-sHaven-UI',
@@ -356,9 +357,29 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Laural's Haven app is running on http://localhost:${PORT}`);
-  console.log(`Admin console is available at http://localhost:${PORT}/admin`);
-  console.log(`Configured UPI ID: ${UPI_ID}`);
-  console.log('Kitchen queue sync is active.');
-});
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`Laural's Haven app is running on http://localhost:${port}`);
+    console.log(`Admin console is available at http://localhost:${port}/admin`);
+    console.log(`Configured UPI ID: ${UPI_ID}`);
+    console.log('Kitchen queue sync is active.');
+  });
+
+  server.on('error', (error) => {
+    if (error && error.code === 'EADDRINUSE') {
+      const nextPort = FALLBACK_PORTS.find((candidate) => candidate !== port && candidate !== PORT);
+      if (nextPort) {
+        console.warn(`Port ${port} is busy; retrying on ${nextPort}...`);
+        startServer(nextPort);
+        return;
+      }
+
+      console.error(`No free port available. Tried ${FALLBACK_PORTS.join(', ')}`);
+      process.exit(1);
+    }
+
+    throw error;
+  });
+}
+
+startServer(Number(process.env.PORT) || PORT);

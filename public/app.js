@@ -1,4 +1,6 @@
-const ASSET_VERSION = '20261026-1';
+const ASSET_VERSION = '20261027-strict-local-api';
+const API_BASE = 'http://localhost:3001';
+window.LH_API_BASE = API_BASE;
 
 const cart = new Map();
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
@@ -15,19 +17,7 @@ const state = {
 };
 
 function getApiBase() {
-  const configuredBase = (window.LH_API_BASE || '').trim().replace(/\/$/, '');
-  if (configuredBase) return configuredBase;
-
-  const host = (window.location.hostname || '').toLowerCase();
-  if (host.includes('github.io') || host.includes('pages.dev')) {
-    return 'https://laurals-haven-api.onrender.com';
-  }
-
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return 'http://localhost:3000';
-  }
-
-  return window.location.origin;
+  return API_BASE;
 }
 
 function apiUrl(path) {
