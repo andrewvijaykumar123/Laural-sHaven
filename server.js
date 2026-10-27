@@ -8,8 +8,15 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const UPI_ID = process.env.UPI_ID || 'paytm.s1pl5v7@pty';
 const UPI_NAME = process.env.UPI_NAME || "Laural's Haven";
-const STATUS_FLOW = ['pending', 'accepted', 'ready', 'delivered'];
+const STATUS_FLOW = ['pending', 'accepted', 'rejected', 'cooking', 'completed'];
 const FALLBACK_PORTS = [3000, 3001, 3002, 8001, 8002];
+
+function normalizeOrderStatus(status) {
+  const normalized = String(status || 'pending').trim().toLowerCase();
+  if (normalized === 'ready') return 'cooking';
+  if (normalized === 'delivered') return 'completed';
+  return normalized;
+}
 const defaultAllowedOrigins = [
   'https://andrewvijaykumar123.github.io',
   'https://andrewvijaykumar123.github.io/Laural-sHaven-UI',
@@ -201,7 +208,7 @@ function createOrderId() {
 function toPublicOrder(order) {
   return {
     ...order,
-    status: order.status || 'pending',
+    status: normalizeOrderStatus(order.status || 'pending'),
     createdAt: order.createdAt || new Date().toISOString(),
     updatedAt: order.updatedAt || new Date().toISOString(),
     total: Number(order.total || 0),
@@ -217,9 +224,11 @@ function toPublicOrder(order) {
 
 function buildAdminSummary() {
   const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-  const pendingOrders = orders.filter((order) => order.status === 'pending').length;
-  const acceptedOrders = orders.filter((order) => order.status === 'accepted').length;
-  const deliveredOrders = orders.filter((order) => order.status === 'delivered').length;
+  const pendingOrders = orders.filter((order) => normalizeOrderStatus(order.status) === 'pending').length;
+  const acceptedOrders = orders.filter((order) => normalizeOrderStatus(order.status) === 'accepted').length;
+  const rejectedOrders = orders.filter((order) => normalizeOrderStatus(order.status) === 'rejected').length;
+  const cookingOrders = orders.filter((order) => normalizeOrderStatus(order.status) === 'cooking').length;
+  const completedOrders = orders.filter((order) => normalizeOrderStatus(order.status) === 'completed').length;
 
   const itemCounts = new Map();
   orders.forEach((order) => {
@@ -240,7 +249,10 @@ function buildAdminSummary() {
     totalOrders: orders.length,
     pendingOrders,
     acceptedOrders,
-    deliveredOrders,
+    rejectedOrders,
+    cookingOrders,
+    completedOrders,
+    deliveredOrders: completedOrders,
     popularItems,
     recentOrders: orders.slice(0, 6)
   };
@@ -282,7 +294,7 @@ app.get('/api/admin/summary', (_req, res) => {
 
 app.patch('/api/orders/:id/status', (req, res) => {
   const { id } = req.params;
-  const requestedStatus = String(req.body?.status || '').trim().toLowerCase();
+  const requestedStatus = normalizeOrderStatus(req.body?.status);
   const orderIndex = orders.findIndex((order) => order.id === id);
 
   if (orderIndex === -1) {
