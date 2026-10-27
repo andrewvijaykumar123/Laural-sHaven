@@ -1,4 +1,4 @@
-const ASSET_VERSION = '20261027-layout-fix';
+const ASSET_VERSION = '20261027-public-fallback';
 
 const cart = new Map();
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
