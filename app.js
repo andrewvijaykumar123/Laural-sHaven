@@ -1,4 +1,4 @@
-const ASSET_VERSION = '20261026-1';
+const ASSET_VERSION = '20261027-fix';
 
 const cart = new Map();
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
