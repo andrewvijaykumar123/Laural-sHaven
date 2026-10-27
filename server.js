@@ -9,9 +9,43 @@ const PORT = Number(process.env.PORT) || 3000;
 const UPI_ID = process.env.UPI_ID || 'paytm.s1pl5v7@pty';
 const UPI_NAME = process.env.UPI_NAME || "Laural's Haven";
 const STATUS_FLOW = ['pending', 'accepted', 'ready', 'delivered'];
+const defaultAllowedOrigins = [
+  'https://andrewvijaykumar123.github.io',
+  'https://andrewvijaykumar123.github.io/Laural-sHaven-UI',
+  'https://andrewvijaykumar123.github.io/Laural-sHaven-UI-AdminConsole',
+  'https://laurals-haven-api.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:8001',
+  'http://localhost:8002'
+];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowedOrigins.join(','))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const orders = [];
 
 app.use(express.json({ limit: '1mb' }));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const isAllowedOrigin = !origin ||
+    allowedOrigins.includes(origin) ||
+    /^https?:\/\/localhost(?::\d+)?$/.test(origin) ||
+    /(?:github\.io|pages\.dev)$/i.test(origin) ||
+    /https?:\/\/.*\.github\.io(?:\/[A-Za-z0-9._-]+)?$/i.test(origin);
+
+  if (isAllowedOrigin && origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 app.use((error, _req, res, _next) => {
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
     return res.status(400).json({

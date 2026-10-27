@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: laurals-haven-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://andrewvijaykumar123.github.io,https://andrewvijaykumar123.github.io/Laural-sHaven-UI,https://andrewvijaykumar123.github.io/Laural-sHaven-UI-AdminConsole,http://localhost:3000,http://localhost:8001,http://localhost:8002
+      - key: UPI_ID
+        value: paytm.s1pl5v7@pty
+      - key: UPI_NAME
+        value: Laural's Haven

@@ -39,6 +39,19 @@ Set the following values:
 - EMAIL_TO: Havenlaurals06@gmail.com
 - UPI_ID: paytm.s1pl5v7@pty
 
+## Production deployment note
+
+This project is designed to be split between a static GitHub Pages storefront/admin console and a hosted backend API.
+
+Recommended deployment:
+
+1. Deploy the Express API on Render using the included `render.yaml` file.
+2. Use the resulting API URL in both public frontends:
+   - `https://laurals-haven-api.onrender.com`
+3. Keep the GitHub Pages storefront and admin console pointing to that backend through `window.LH_API_BASE`.
+
+The public frontend URLs are already set to the Render backend by default. If the Render service name changes, update the `window.LH_API_BASE` value in both frontend repos.
+
 ## Production email note
 
 The project uses Nodemailer with SMTP so you can send order confirmations to the production Gmail address using an open-source SMTP setup or a self-hosted mail relay without relying on a proprietary frontend-only flow. If SMTP is not configured, the app still accepts the order and logs the email status to the server output.

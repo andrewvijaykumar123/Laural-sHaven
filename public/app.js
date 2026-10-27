@@ -14,6 +14,27 @@ const state = {
   upiName: "Laural's Haven"
 };
 
+function getApiBase() {
+  const configuredBase = (window.LH_API_BASE || '').trim().replace(/\/$/, '');
+  if (configuredBase) return configuredBase;
+
+  const host = (window.location.hostname || '').toLowerCase();
+  if (host.includes('github.io') || host.includes('pages.dev')) {
+    return 'https://laurals-haven-api.onrender.com';
+  }
+
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:3000';
+  }
+
+  return window.location.origin;
+}
+
+function apiUrl(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${getApiBase()}${normalizedPath}`;
+}
+
 const elements = {
   menuContainer: document.getElementById('menuContainer'),
   cartTrigger: document.getElementById('cartTrigger'),
@@ -61,11 +82,6 @@ function showToast(message) {
   showToast.timer = setTimeout(() => {
     toast.classList.remove('visible');
   }, 2600);
-}
-
-function isStaticHost() {
-  const host = window.location.hostname || '';
-  return host.includes('github.io') || host.includes('pages.dev') || host === '';
 }
 
 function getOrderSummary() {
@@ -254,26 +270,7 @@ async function submitOrder(event) {
   };
 
   try {
-    if (isStaticHost()) {
-      const confirmedOrder = {
-        ...payload,
-        id: payload.transactionRef,
-        transactionRef: payload.transactionRef,
-        total: Number(payload.total || 0),
-        items: payload.items || []
-      };
-
-      showToast(`Order placed successfully • ${confirmedOrder.id}`);
-      clearCart();
-      closeModal(elements.checkoutModal);
-      closeModal(elements.qaModal);
-      elements.checkoutForm.reset();
-      state.selectedUPI = null;
-      showConfirmation(confirmedOrder, 'local_static');
-      return;
-    }
-
-    const response = await fetch('/api/checkout', {
+    const response = await fetch(apiUrl('/api/checkout'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -313,7 +310,7 @@ async function submitOrder(event) {
 }
 
 async function loadMenu() {
-  const menuSources = [`/api/menu?ts=${Date.now()}`, staticAssetUrl('./menu.json')];
+  const menuSources = [`${apiUrl('/api/menu')}?ts=${Date.now()}`, staticAssetUrl('./menu.json')];
 
   for (const source of menuSources) {
     try {

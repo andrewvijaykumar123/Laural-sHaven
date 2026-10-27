@@ -10,6 +10,27 @@ const state = {
   orders: []
 };
 
+function getApiBase() {
+  const configuredBase = (window.LH_API_BASE || '').trim().replace(/\/$/, '');
+  if (configuredBase) return configuredBase;
+
+  const host = (window.location.hostname || '').toLowerCase();
+  if (host.includes('github.io') || host.includes('pages.dev')) {
+    return 'https://laurals-haven-api.onrender.com';
+  }
+
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:3000';
+  }
+
+  return window.location.origin;
+}
+
+function apiUrl(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${getApiBase()}${normalizedPath}`;
+}
+
 const elements = {
   totalRevenue: document.getElementById('totalRevenue'),
   totalOrders: document.getElementById('totalOrders'),
@@ -136,8 +157,8 @@ function renderOrders(orders) {
 async function loadDashboard() {
   try {
     const [summaryResponse, ordersResponse] = await Promise.all([
-      fetch('/api/admin/summary', { cache: 'no-store' }),
-      fetch('/api/orders', { cache: 'no-store' })
+      fetch(apiUrl('/api/admin/summary'), { cache: 'no-store' }),
+      fetch(apiUrl('/api/orders'), { cache: 'no-store' })
     ]);
 
     const summaryData = await summaryResponse.json();
@@ -156,7 +177,7 @@ async function loadDashboard() {
 
 async function updateStatus(orderId, status) {
   try {
-    const response = await fetch(`/api/orders/${orderId}/status`, {
+    const response = await fetch(apiUrl(`/api/orders/${orderId}/status`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
