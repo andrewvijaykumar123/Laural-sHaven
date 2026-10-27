@@ -19,18 +19,6 @@ const STORAGE_KEYS = {
   orders: 'lauralsHavenFallbackOrders'
 };
 
-function clearPersistedFallbackState() {
-  [STORAGE_KEYS.orders, STORAGE_KEYS.menu].forEach((key) => {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.warn('Unable to clear fallback storage key:', key, error);
-    }
-  });
-}
-
-clearPersistedFallbackState();
-
 function readStoredOrders() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.orders);
