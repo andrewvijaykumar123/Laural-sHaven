@@ -369,7 +369,9 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-function startServer(port) {
+function startServer(port, attempted = new Set()) {
+  attempted.add(port);
+
   const server = app.listen(port, () => {
     console.log(`Laural's Haven app is running on http://localhost:${port}`);
     console.log(`Admin console is available at http://localhost:${port}/admin`);
@@ -379,14 +381,14 @@ function startServer(port) {
 
   server.on('error', (error) => {
     if (error && error.code === 'EADDRINUSE') {
-      const nextPort = FALLBACK_PORTS.find((candidate) => candidate !== port && candidate !== PORT);
+      const nextPort = [...new Set([...FALLBACK_PORTS, PORT])].find((candidate) => !attempted.has(candidate));
       if (nextPort) {
         console.warn(`Port ${port} is busy; retrying on ${nextPort}...`);
-        startServer(nextPort);
+        startServer(nextPort, attempted);
         return;
       }
 
-      console.error(`No free port available. Tried ${FALLBACK_PORTS.join(', ')}`);
+      console.error(`No free port available. Tried ${[...attempted].join(', ')}`);
       process.exit(1);
     }
 

@@ -24,3 +24,9 @@ test('backend supports the required order status flow', () => {
   assert.match(serverJs, /completed/);
   assert.match(serverJs, /STATUS_FLOW\s*=\s*\[[^\]]*pending[^\]]*accepted[^\]]*rejected[^\]]*cooking[^\]]*completed/);
 });
+
+test('port fallback logic avoids infinite retries on busy ports', () => {
+  assert.match(serverJs, /attempted\s*=\s*new Set\(\)/);
+  assert.doesNotMatch(serverJs, /startServer\(nextPort\)/);
+  assert.match(serverJs, /find\(\(candidate\)\s*=>\s*!attempted\.has\(candidate\)\)/);
+});
