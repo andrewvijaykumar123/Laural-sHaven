@@ -310,7 +310,7 @@
     const img = $('#qrImg');
     if (img) {
       img.addEventListener('error', () => { img.src = 'assets/payment-upi.jpeg'; }, { once: true });
-      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=${encodeURIComponent(upiLink(o))}`;
+      try { img.src = window.LH_QR(upiLink(o)); } catch (e) { img.src = 'assets/payment-upi.jpeg'; }
     }
     $('#trackNow').addEventListener('click', () => { closeModal(); openDrawer('ordersDrawer'); });
   }
