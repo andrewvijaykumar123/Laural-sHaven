@@ -14,6 +14,47 @@ const state = {
   upiName: "Laural's Haven"
 };
 
+const STORAGE_KEYS = {
+  menu: 'lauralsHavenFallbackMenu',
+  orders: 'lauralsHavenFallbackOrders'
+};
+
+function readStoredOrders() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.orders);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function writeStoredOrders(orders) {
+  localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
+}
+
+function saveOfflineOrder(payload, forceId = null) {
+  const order = {
+    id: forceId || `LH-${Date.now().toString().slice(-8)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    customerName: payload.customerName || 'Guest',
+    phone: payload.phone || '—',
+    notes: payload.notes || '',
+    paymentMethod: payload.paymentMethod || 'upi',
+    transactionRef: payload.transactionRef || `LH-${Date.now().toString().slice(-8)}`,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    items: Array.isArray(payload.items) ? payload.items : [],
+    subtotal: Number(payload.subtotal || 0),
+    total: Number(payload.total || payload.subtotal || 0)
+  };
+
+  const orders = readStoredOrders();
+  orders.unshift(order);
+  writeStoredOrders(orders);
+  return order;
+}
+
 function getApiBase() {
   const configuredBase = (window.LH_API_BASE || '').trim().replace(/\/$/, '');
   if (configuredBase) return configuredBase;
@@ -283,10 +324,6 @@ async function submitOrder(event) {
   };
 
   try {
-    if (isStaticHost() && !hasConfiguredBackend()) {
-      throw new Error('The public storefront is not connected to the live backend yet. Set window.LH_API_BASE to your deployed API URL to sync orders with the admin console.');
-    }
-
     const response = await fetch(apiUrl('/api/checkout'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -322,7 +359,14 @@ async function submitOrder(event) {
     state.selectedUPI = null;
     showConfirmation(confirmedOrder, 'synced');
   } catch (error) {
-    showToast(error.message || 'Unable to place order.');
+    const offlineOrder = saveOfflineOrder(payload);
+    showToast(`Offline order saved • ${offlineOrder.id}`);
+    clearCart();
+    closeModal(elements.checkoutModal);
+    closeModal(elements.qaModal);
+    elements.checkoutForm.reset();
+    state.selectedUPI = null;
+    showConfirmation(offlineOrder, 'offline');
   }
 }
 
@@ -346,6 +390,7 @@ async function loadMenu() {
       state.menu = menu;
       state.upiId = result.upiId || state.upiId;
       state.upiName = result.upiName || state.upiName;
+      localStorage.setItem(STORAGE_KEYS.menu, JSON.stringify({ menu, upiId: state.upiId, upiName: state.upiName }));
       renderMenu();
       renderCart();
       renderQrCode();
@@ -353,6 +398,21 @@ async function loadMenu() {
     } catch (error) {
       console.warn(`Menu fallback failed for ${source}:`, error);
     }
+  }
+
+  try {
+    const fallback = JSON.parse(localStorage.getItem(STORAGE_KEYS.menu) || 'null');
+    if (fallback && Array.isArray(fallback.menu) && fallback.menu.length) {
+      state.menu = fallback.menu;
+      state.upiId = fallback.upiId || state.upiId;
+      state.upiName = fallback.upiName || state.upiName;
+      renderMenu();
+      renderCart();
+      renderQrCode();
+      return;
+    }
+  } catch (error) {
+    console.warn('Local menu fallback failed:', error);
   }
 
   console.error('Could not load menu from API or bundled JSON.');
