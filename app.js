@@ -115,6 +115,14 @@
     if (chip) document.getElementById(`cat-${chip.dataset.cat}`).scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   });
 
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    const target = a && a.getAttribute('href').length > 1 && document.getElementById(a.getAttribute('href').slice(1));
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  });
+
   /* ---------- Cart ---------- */
   function change(id, delta, sourceEl) {
     if (!ITEMS.has(id) || (delta > 0 && isOut(id))) return;
@@ -424,16 +432,39 @@
 
   window.addEventListener('scroll', () => $('#topbar').classList.toggle('scrolled', scrollY > 10), { passive: true });
 
+  function syncStickyOffsets() {
+    const bar = $('#topbar');
+    const chips = $('#chips');
+    const root = document.documentElement.style;
+    root.setProperty('--topbar-h', `${getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0}px`);
+    root.setProperty('--chips-h', `${chips.offsetHeight}px`);
+  }
+
   function spy() {
+    syncStickyOffsets();
+    if ('ResizeObserver' in window) new ResizeObserver(syncStickyOffsets).observe($('#topbar'));
+    addEventListener('resize', syncStickyOffsets, { passive: true });
+    const chipBar = $('#chips');
+    let current = null;
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
-        if (!e.isIntersecting) return;
-        $$('.chip').forEach((c) => c.classList.toggle('on', c.dataset.cat === e.target.dataset.cat));
+        if (!e.isIntersecting || e.target.dataset.cat === current) return;
+        current = e.target.dataset.cat;
+        $$('.chip').forEach((c) => c.classList.toggle('on', c.dataset.cat === current));
         const on = $('.chip.on');
-        if (on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+        if (on) chipBar.scrollTo({ left: on.offsetLeft - (chipBar.clientWidth - on.offsetWidth) / 2, behavior: 'auto' });
       });
-    }, { rootMargin: '-140px 0px -65% 0px' });
+    }, { rootMargin: `-${Math.round((parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 140) + 8)}px 0px -65% 0px` });
     $$('.cat').forEach((s) => io.observe(s));
+    addEventListener('scroll', () => {
+      if (innerHeight + scrollY < document.documentElement.scrollHeight - 4) return;
+      const last = [...$$('.cat')].reverse().find((s) => !s.hidden && s.offsetParent);
+      if (!last || last.dataset.cat === current) return;
+      current = last.dataset.cat;
+      $$('.chip').forEach((c) => c.classList.toggle('on', c.dataset.cat === current));
+      const on = $('.chip.on');
+      if (on) chipBar.scrollTo({ left: on.offsetLeft - (chipBar.clientWidth - on.offsetWidth) / 2, behavior: 'auto' });
+    }, { passive: true });
   }
 
   function confetti() {
