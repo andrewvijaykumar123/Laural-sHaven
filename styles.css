@@ -161,6 +161,7 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 .field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 0.25rem rgba(255,180,84,.16)}
 .field.err input{border-color:var(--red)}
 .field .msg{color:var(--red);font-size:.78rem;margin-top:0.25rem;min-height:1em}
+.field .hint{display:block;color:var(--muted);font-size:.74rem;margin-top:0.125rem}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem}
 .seg button{padding:0.75rem;border-radius:0.8125rem;border:1px solid var(--line);background:var(--card);font-weight:700;transition:.2s}
 .seg button.on{border-color:var(--accent);background:rgba(255,180,84,.14);color:var(--accent)}

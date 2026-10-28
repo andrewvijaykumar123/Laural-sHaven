@@ -189,11 +189,12 @@
         <button class="btn primary" style="width:100%" id="toCheckout" ${outLines.length ? 'disabled' : ''}>${outLines.length ? 'Remove sold-out items' : 'Checkout'}</button>`;
       return;
     }
-    const profile = store.get('profile', { n: '', p: '' });
+    const profile = store.get('profile', { n: '', p: '', em: '' });
     body.innerHTML = `<button class="back" id="backCart">← Back to cart</button>
       <form class="form" id="coForm" novalidate>
         <div class="field" id="fName"><label for="coName">Your name</label><input id="coName" maxlength="40" autocomplete="name" value="${esc(profile.n)}" placeholder="e.g. Anita"><div class="msg"></div></div>
         <div class="field" id="fPhone"><label for="coPhone">Mobile number</label><input id="coPhone" inputmode="tel" maxlength="14" autocomplete="tel" value="${esc(profile.p)}" placeholder="10-digit number"><div class="msg"></div></div>
+        <div class="field" id="fEmail"><label for="coEmail">Email (optional)</label><input id="coEmail" type="email" inputmode="email" maxlength="80" autocomplete="email" value="${esc(profile.em || '')}" placeholder="you@example.com"><div class="msg"></div><small class="hint">We email you only when your order is confirmed and when it is ready.</small></div>
         <div class="field"><label>Service</label><div class="seg" id="svcSeg"><button type="button" data-v="dine" class="${service === 'dine' ? 'on' : ''}">🍽️ Dine-in</button><button type="button" data-v="take" class="${service === 'take' ? 'on' : ''}">🥡 Takeaway</button></div></div>
         <div class="field" id="fTable" ${service === 'dine' ? '' : 'hidden'}><label for="coTable">Table number (optional)</label><input id="coTable" maxlength="8" placeholder="e.g. 4"></div>
         <div class="field"><label for="coNote">Note for the kitchen (optional)</label><textarea id="coNote" rows="2" maxlength="140" placeholder="Less spicy, no onion..."></textarea></div>
@@ -272,7 +273,10 @@
     setErr('fName', name ? '' : 'Please enter your name');
     const digits = phone.replace(/\D/g, '');
     setErr('fPhone', digits.length >= 10 && digits.length <= 13 ? '' : 'Enter a valid mobile number');
-    if (!name || digits.length < 10 || digits.length > 13) return;
+    const em = LH.clean($('#coEmail').value, 80).toLowerCase();
+    const emOk = !em || /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(em);
+    setErr('fEmail', emOk ? '' : 'Enter a valid email or leave it blank');
+    if (!name || digits.length < 10 || digits.length > 13 || !emOk) return;
     if (cartLines().some((l) => isOut(l.item.id))) { toast('Please remove sold-out items.', 'bad'); checkout = false; renderCartDrawer(); return; }
     if (Date.now() - lastPlaced < 15000) { toast('Please wait a few seconds before placing another order.', 'bad'); return; }
 
@@ -280,14 +284,14 @@
     btn.disabled = true;
     btn.textContent = 'Sending securely...';
     const draft = {
-      n: name, p: phone, nt: $('#coNote').value, pay: payMethod, svc: service, tbl: service === 'dine' ? $('#coTable').value : '',
+      n: name, p: phone, em, nt: $('#coNote').value, pay: payMethod, svc: service, tbl: service === 'dine' ? $('#coTable').value : '',
       it: Object.entries(cart)
     };
     try {
       const order = await LH.publishOrder(draft);
       lastPlaced = Date.now();
       store.set('lastPlaced', lastPlaced);
-      store.set('profile', { n: name, p: phone });
+      store.set('profile', { n: name, p: phone, em });
       orders.unshift({ ...order, status: 'pending', statusTs: 0, reason: '', payVerified: false, seen: true });
       saveOrders();
       cart = {}; saveCart();
