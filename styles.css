@@ -291,3 +291,9 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 }
 @media (min-width:1600px){:focus-visible{outline-width:3px;outline-offset:3px}}
 @media (prefers-reduced-motion:reduce){*:not(.aurora *):not(.float-layer *):not(.marquee *):not(.brand-mark):not(.live-pill *):not(h1 em),*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.reveal{opacity:1;transform:none}}
+
+/* Delivery code shown to the customer */
+.otp-box{margin:0.75rem 0;padding:0.75rem 0.875rem;border-radius:0.875rem;border:1px dashed var(--accent);background:rgba(255,180,84,.1);text-align:center}
+.otp-box small{display:block;color:var(--muted);font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.otp-box b{display:block;font-family:ui-monospace,Consolas,monospace;font-size:2rem;letter-spacing:.35em;padding-left:.35em;color:var(--accent);line-height:1.3}
+.otp-box span{display:block;color:var(--muted);font-size:.78rem}

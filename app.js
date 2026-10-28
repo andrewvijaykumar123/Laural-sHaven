@@ -452,6 +452,10 @@
 
   const upiLink = (o) => `upi://pay?pa=${encodeURIComponent(UPI.id)}&pn=${encodeURIComponent(UPI.name)}&am=${o.total}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
 
+  // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
+  const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
+    ? `<div class="otp-box" role="group" aria-label="Delivery code"><small>Your delivery code</small><b>${esc(o.otp)}</b><span>Give it to the delivery partner only when you receive your order.${o.em ? ' We also emailed it to you.' : ''}</span></div>` : '');
+
   function showSuccess(o) {
     const pay = o.pay === 'upi'
       ? `<div class="pay-note">Scan with any UPI app and pay <b>${fmt(o.total)}</b>. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
@@ -460,6 +464,7 @@
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
+      ${otpBox(o)}
       ${pay}
       <div class="row-btns"><button class="btn ghost" id="trackNow">Track my order</button><button class="btn ghost" data-modal-close>Keep browsing</button></div>`);
     const img = $('#qrImg');
@@ -508,7 +513,7 @@
         <div class="items-list">${o.it.map(([id, q]) => `${q} × ${esc(ITEMS.get(id)?.name || id)}`).join(', ')}</div>
         <strong>${fmt(o.total)}</strong> <span style="color:var(--muted);font-size:.8rem">· ${where} · ${new Date(o.ts).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span>
         ${o.svc === 'deliver' ? `<div class="verify">📍 ${esc(o.addr)}</div>` : ''}
-        ${tracker}${eta}${pay}
+        ${tracker}${eta}${otpBox(o)}${pay}
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
         ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
         ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
@@ -571,7 +576,7 @@
     } else if (o.status === 'out') { sub = 'On the way'; info = '<b>🛵 Your order is out for delivery.</b> Live location appears here as soon as it is shared.'; }
     else { sub = LH.statusLabel(o, o.status); info = "<b>We're preparing your order.</b> You'll see your delivery partner here once it is out for delivery."; }
     $('#tvSub').textContent = sub;
-    $('#tvInfo').innerHTML = `<div>${info}</div><div class="tv-addr">📍 ${esc(o.addr)}</div>`;
+    $('#tvInfo').innerHTML = `<div>${info}</div>${otpBox(o)}<div class="tv-addr">📍 ${esc(o.addr)}</div>`;
   }
 
   async function openTrack(id) {
@@ -621,10 +626,11 @@
     if (!o || ts < o.statusTs) return;
     const changed = o.status !== s;
     o.status = s; o.statusTs = ts; o.reason = r || '';
+    if (s === 'completed' || s === 'rejected') delete o.otp;
     saveOrders();
     if (s === 'completed' || s === 'rejected') riders.delete(id);
     if (changed) {
-      toast(`Order ${id}: ${LH.statusLabel(o, s)}${s === 'ready' ? (o.svc === 'deliver' ? ' - packed and about to leave!' : ' - come and get it!') : s === 'out' ? ' 🛵 - track it live in My orders' : ''}`, s === 'rejected' ? 'bad' : 'ok');
+      toast(`Order ${id}: ${LH.statusLabel(o, s)}${s === 'ready' ? (o.svc === 'deliver' ? ' - packed and about to leave!' : ' - come and get it!') : s === 'out' ? ` 🛵 - track it live in My orders${o.otp ? `. Your delivery code is ${o.otp}` : ''}` : ''}`, s === 'rejected' ? 'bad' : 'ok');
       if (s === 'ready' && o.svc !== 'deliver') confetti();
       if (!$('#ordersDrawer').classList.contains('open')) $('#ordersDot').hidden = false;
     }
