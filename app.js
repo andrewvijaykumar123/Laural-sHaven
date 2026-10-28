@@ -202,7 +202,7 @@
       <form class="form" id="coForm" novalidate>
         <div class="field" id="fName"><label for="coName">Your name</label><input id="coName" maxlength="40" autocomplete="name" value="${esc(profile.n)}" placeholder="e.g. Anita"><div class="msg"></div></div>
         <div class="field" id="fPhone"><label for="coPhone">Mobile number</label><input id="coPhone" inputmode="tel" maxlength="14" autocomplete="tel" value="${esc(profile.p)}" placeholder="10-digit number"><div class="msg"></div></div>
-        <div class="field" id="fEmail"><label for="coEmail">Email (optional)</label><input id="coEmail" type="email" inputmode="email" maxlength="80" autocomplete="email" value="${esc(profile.em || '')}" placeholder="you@example.com"><div class="msg"></div><small class="hint">We email you only when your order is confirmed and when it is ready.</small></div>
+        <div class="field" id="fEmail"><label for="coEmail">Email (optional)</label><input id="coEmail" type="email" inputmode="email" maxlength="80" autocomplete="email" value="${esc(profile.em || '')}" placeholder="you@example.com"><div class="msg"></div><small class="hint">We email you within seconds when your order is received, confirmed, ready or on its way.</small></div>
         <div class="field"><label>Service</label><div class="seg three" id="svcSeg"><button type="button" data-v="dine" class="${service === 'dine' ? 'on' : ''}">🍽️ Dine-in</button><button type="button" data-v="take" class="${service === 'take' ? 'on' : ''}">🥡 Takeaway</button><button type="button" data-v="deliver" class="${service === 'deliver' ? 'on' : ''}">🛵 Delivery</button></div></div>
         <div class="field" id="fTable" ${service === 'dine' ? '' : 'hidden'}><label for="coTable">Table number (optional)</label><input id="coTable" maxlength="8" placeholder="e.g. 4"></div>
         <div id="fDeliver" ${service === 'deliver' ? '' : 'hidden'}>
@@ -355,6 +355,7 @@
     closeDrawers(true);
     lastFocus = document.activeElement;
     const d = $(`#${id}`);
+    d.inert = false;
     d.classList.add('open');
     d.setAttribute('aria-hidden', 'false');
     $('#scrim').hidden = false;
@@ -364,7 +365,7 @@
     setTimeout(() => { const f = $('button, input', d); if (f) f.focus(); }, 80);
   }
   function closeDrawers(silent) {
-    $$('.drawer.open').forEach((d) => { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); });
+    $$('.drawer.open').forEach((d) => { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); d.inert = true; });
     $('#scrim').hidden = true;
     document.body.style.overflow = '';
     destroyPick();
@@ -510,11 +511,14 @@
         ${tracker}${eta}${pay}
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
         ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
+        ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
       </article>`;
     }).join('') + (finished ? '<button class="btn ghost" style="width:100%" id="clearDone">Clear finished orders</button>' : '');
   }
 
   $('#ordersBody').addEventListener('click', (e) => {
+    const again = e.target.closest('[data-again]');
+    if (again) { reorder(again.dataset.again); return; }
     const tr = e.target.closest('[data-track]');
     if (tr) { openTrack(tr.dataset.track); return; }
     const pay = e.target.closest('[data-pay]');
@@ -524,6 +528,23 @@
       saveOrders(); renderOrders();
     }
   });
+
+  function reorder(id) {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return;
+    let added = 0; let skipped = 0;
+    o.it.forEach(([item, q]) => {
+      if (!ITEMS.has(item) || isOut(item)) { skipped++; return; }
+      cart[item] = Math.min(25, (cart[item] || 0) + q);
+      added++;
+    });
+    if (!added) { toast('Those items are not available right now.', 'bad'); return; }
+    saveCart();
+    if (['dine', 'take', 'deliver'].includes(o.svc)) { service = o.svc; store.set('svc', service); }
+    $$('.card').forEach((c) => updateCard(c.dataset.id));
+    openDrawer('cartDrawer');
+    toast(skipped ? `Added to your cart. ${skipped} item${skipped === 1 ? ' is' : 's are'} unavailable right now.` : 'Added to your cart.', skipped ? '' : 'ok');
+  }
 
   /* ---------- Live delivery tracking (OpenStreetMap) ---------- */
   let trackId = null, trackCtl = null, trackToken = 0, trackTimer = 0, userMoved = false, trackFocus = null;
