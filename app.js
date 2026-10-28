@@ -210,13 +210,13 @@
           <div id="delivMore">
             <div class="lh-map" id="pickMap" hidden></div>
             <div class="geo-actions"><button type="button" class="btn ghost sm" id="geoBtn">📍 Use my current location</button></div>
-            <div class="field" id="fAddr"><label for="coAddr">Delivery address</label><textarea id="coAddr" rows="2" maxlength="200" autocomplete="street-address" placeholder="House / flat no., street, landmark">${esc(profile.addr || '')}</textarea><div class="msg"></div><small class="hint">Free delivery within ${LH.DELIVERY_KM} km of the cafe. Tap the map or drag the pin to fine-tune the spot.</small></div>
+            <div class="field" id="fAddr"><label for="coAddr">Delivery address</label><textarea id="coAddr" rows="2" maxlength="200" autocomplete="street-address" placeholder="House / flat no., street, landmark">${esc(profile.addr || '')}</textarea><div class="msg"></div><small class="hint">Delivery is free within ${LH.FREE_KM} km, ${fmt(LH.RATE_MID)}/km from ${LH.FREE_KM} to ${LH.MID_KM} km and ${fmt(LH.RATE_FAR)}/km beyond ${LH.MID_KM} km (up to ${LH.DELIVERY_KM} km). Tap the map or drag the pin to fine-tune the spot.</small></div>
           </div>
         </div>
         <div class="field"><label for="coNote">Note for the kitchen (optional)</label><textarea id="coNote" rows="2" maxlength="140" placeholder="Less spicy, no onion..."></textarea></div>
         <div class="field"><label>Payment</label><div class="seg" id="paySeg"><button type="button" data-v="upi" class="${payMethod === 'upi' ? 'on' : ''}">📲 Pay by UPI</button><button type="button" data-v="counter" id="payCounter" class="${payMethod === 'counter' ? 'on' : ''}">${service === 'deliver' ? '💵 Cash on delivery' : '💵 Pay at counter'}</button></div></div>
       </form>`;
-    foot.innerHTML = `<div class="sum"><span>To pay</span><strong>${fmt(cartTotal())}</strong></div><button class="btn primary" style="width:100%" id="placeOrder">Place order</button>`;
+    foot.innerHTML = `<div class="fee-row" id="feeRow" hidden></div><div class="sum"><span>To pay</span><strong id="toPay">${fmt(cartTotal())}</strong></div><button class="btn primary" style="width:100%" id="placeOrder">Place order</button>`;
     if (service === 'deliver') enterDelivery(); else updatePlaceBtn();
   }
 
@@ -238,6 +238,17 @@
   /* ---------- Delivery: location, 5 km check and map pin ---------- */
   const DEL_MSG = "We don't offer online delivery right now, but we're working to fulfil your request soon.";
   const deliverOk = () => !!LH.getCfg().del && geoState !== 'locating' && !!geo && LH.inRange(geo.lat, geo.lng);
+  const deliveryQuote = () => (service === 'deliver' && geo && LH.inRange(geo.lat, geo.lng) ? LH.deliveryFee(LH.fromShopKm(geo.lat, geo.lng)) : null);
+  const feeText = (fee) => (fee ? fmt(fee) : 'Free');
+
+  function updatePay() {
+    const pay = $('#toPay');
+    if (!pay) return;
+    const fee = deliveryQuote();
+    pay.textContent = fmt(cartTotal() + (fee || 0));
+    const row = $('#feeRow');
+    if (row) { row.hidden = fee === null; row.innerHTML = fee === null ? '' : `<span>Items ${fmt(cartTotal())}</span><span>Delivery <b>${feeText(fee)}</b></span>`; }
+  }
 
   function updatePlaceBtn() {
     const b = $('#placeOrder');
@@ -262,12 +273,13 @@
     let kind, html;
     if (!cfg.del) { kind = 'bad'; html = `<b>🛵 Delivery isn't available right now</b><span>${esc(DEL_MSG)} Please choose dine-in or takeaway.</span>${switchBtn}`; }
     else if (geoState === 'locating') { kind = 'info'; html = '<b>📡 Finding your location...</b><span>Please allow location access when your browser asks.</span>'; }
-    else if (geo && km <= LH.DELIVERY_KM) { kind = 'ok'; html = `<b>✅ Great, we deliver to you!</b><span>You are ${km.toFixed(1)} km from the cafe (we deliver within ${LH.DELIVERY_KM} km).${esc(fuzz)}</span>`; }
+    else if (geo && km <= LH.DELIVERY_KM) { kind = 'ok'; html = `<b>✅ Great, we deliver to you!</b><span>You are ${km.toFixed(1)} km from the cafe. Delivery: <b>${feeText(LH.deliveryFee(km))}</b>${LH.deliveryFee(km) ? '' : ` (free within ${LH.FREE_KM} km)`}.${esc(fuzz)}</span>`; }
     else if (geo) { kind = 'bad'; html = `<b>📍 You are ${km.toFixed(1)} km away</b><span>${esc(DEL_MSG)}${esc(fuzz)}</span>${switchBtn}`; }
     else if (geoState === 'denied' || geoState === 'error') { kind = 'warn'; html = `<b>📍 We need your location</b><span>${esc(geoNote)}</span>`; }
-    else { kind = 'info'; html = '<b>📍 Share your location</b><span>We check that your address is within 5 km of the cafe before you order.</span>'; }
+    else { kind = 'info'; html = `<b>📍 Share your location</b><span>We check that your address is within ${LH.DELIVERY_KM} km of the cafe and show the delivery fee before you order.</span>`; }
     box.className = `geo-box ${kind}`;
     box.innerHTML = html;
+    updatePay();
     updatePlaceBtn();
   }
 
@@ -334,7 +346,7 @@
     const t = $('#fTable'); if (t) t.hidden = service !== 'dine';
     const d = $('#fDeliver'); if (d) d.hidden = service !== 'deliver';
     const pc = $('#payCounter'); if (pc) pc.textContent = service === 'deliver' ? '💵 Cash on delivery' : '💵 Pay at counter';
-    if (service === 'deliver') enterDelivery(); else { destroyPick(); updatePlaceBtn(); }
+    if (service === 'deliver') enterDelivery(); else { destroyPick(); updatePay(); updatePlaceBtn(); }
   }
 
   /* ---------- Drawers ---------- */
@@ -489,7 +501,7 @@
       const pay = o.pay === 'upi'
         ? `<div class="verify ${o.payVerified ? 'ok' : ''}">${o.payVerified ? '✔ Payment verified' : 'UPI payment awaiting verification'}</div>`
         : `<div class="verify">${o.svc === 'deliver' ? 'Cash on delivery' : 'Pay at counter'}</div>`;
-      const where = o.svc === 'take' ? 'Takeaway' : o.svc === 'deliver' ? 'Delivery' : `Dine-in${o.tbl ? ` · Table ${esc(o.tbl)}` : ''}`;
+      const where = o.svc === 'take' ? 'Takeaway' : o.svc === 'deliver' ? `Delivery${o.fee ? ` (incl. ${fmt(o.fee)})` : ' (free)'}` : `Dine-in${o.tbl ? ` · Table ${esc(o.tbl)}` : ''}`;
       return `<article class="order-card" data-id="${esc(o.id)}">
         <div class="head"><span class="oid">${esc(o.id)}</span><span class="badge" style="background:${st.color}">${esc(LH.statusLabel(o, o.status))}</span></div>
         <div class="items-list">${o.it.map(([id, q]) => `${q} × ${esc(ITEMS.get(id)?.name || id)}`).join(', ')}</div>
