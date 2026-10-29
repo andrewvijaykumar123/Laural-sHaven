@@ -516,6 +516,7 @@
         ${tracker}${eta}${otpBox(o)}${pay}
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
         ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
+        ${o.status === 'completed' ? (o.fb ? `<div class="fb-done" aria-label="Your rating: ${o.fb.sr} out of 5">Your rating <b aria-hidden="true">${'★'.repeat(o.fb.sr)}${'☆'.repeat(5 - o.fb.sr)}</b> Thank you for your feedback!</div>` : `<button class="btn primary" style="margin-top:10px;width:100%" data-rate="${esc(o.id)}">⭐ Rate your order</button>`) : ''}
         ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
         ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Invoice</button>`}
       </article>`;
@@ -533,7 +534,66 @@
     document.title = prev;
   }
 
+  /* ---------- Feedback: star ratings for the service and each product, plus an optional comment ---------- */
+  const STAR_WORDS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+  const starRow = (key, label, value) => `<div class="stars" role="radiogroup" aria-label="${esc(label)}" data-key="${esc(key)}">${[1, 2, 3, 4, 5].map((n) => `<button type="button" role="radio" aria-checked="${n === value}" aria-label="${n} star${n > 1 ? 's' : ''}" class="${n <= value ? 'on' : ''}" data-n="${n}">★</button>`).join('')}<span class="star-word">${STAR_WORDS[value] || ''}</span></div>`;
+  let rate = null;
+
+  function openRate(o) {
+    if (!o || o.status !== 'completed' || o.fb) return;
+    rate = { o, sr: 0, it: {}, busy: false };
+    const lines = o.it.filter(([id]) => ITEMS.has(id));
+    openModal(`<h2 id="modalTitle">How was your order?</h2>
+      <p style="color:var(--muted)">Order <span class="oid">${esc(o.id)}</span>. Your feedback helps us serve you better.</p>
+      <div class="rate-block"><h3>Our service</h3><small>Ordering, speed and staff</small>${starRow('sr', 'Service rating', 0)}</div>
+      <div class="rate-block"><h3>The food and drinks</h3><small>Rate what you had (optional)</small>
+        ${lines.map(([id]) => `<div class="rate-item"><span>${ITEMS.get(id).icon} ${esc(ITEMS.get(id).name)}</span>${starRow(`it:${id}`, `Rating for ${ITEMS.get(id).name}`, 0)}</div>`).join('')}</div>
+      <div class="field"><label for="fbText">Comments (optional)</label><textarea id="fbText" rows="3" maxlength="300" placeholder="Tell us what you liked or what we can improve"></textarea></div>
+      <div class="msg rate-msg" id="fbMsg" role="alert"></div>
+      <div class="row-btns"><button class="btn primary" id="fbSend">Send feedback</button><button class="btn ghost" data-modal-close>Not now</button></div>`);
+  }
+
+  async function sendRate() {
+    if (!rate || rate.busy) return;
+    const msg = $('#fbMsg');
+    if (!rate.sr) { msg.textContent = 'Please rate our service with the stars first.'; return; }
+    rate.busy = true; msg.textContent = '';
+    const btn = $('#fbSend');
+    btn.disabled = true; btn.textContent = 'Sending...';
+    const { o } = rate;
+    try {
+      const v = await LH.publishFeedback(o, { sr: rate.sr, ir: Object.entries(rate.it), c: $('#fbText').value });
+      o.fb = { sr: v.sr, ts: Date.now() };
+      saveOrders();
+      rate = null;
+      closeModal();
+      toast('Thank you for your feedback!', 'ok');
+      renderOrders();
+    } catch (err) {
+      rate.busy = false;
+      btn.disabled = false; btn.textContent = 'Send feedback';
+      msg.textContent = err && err.code === 'permission-denied' ? 'We could not save your feedback. It may already have been sent, or feedback is not open yet.' : 'Could not send your feedback. Please check your connection and try again.';
+    }
+  }
+
+  $('#modalCard').addEventListener('click', (e) => {
+    if (!rate) return;
+    const star = e.target.closest('.stars button');
+    if (star) {
+      const grp = star.closest('.stars');
+      const key = grp.dataset.key;
+      let n = Number(star.dataset.n);
+      if (key === 'sr') rate.sr = n;
+      else { const id = key.slice(3); if (rate.it[id] === n) { delete rate.it[id]; n = 0; } else rate.it[id] = n; }
+      $$('button', grp).forEach((b) => { const on = Number(b.dataset.n) <= n; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(Number(b.dataset.n) === n)); });
+      $('.star-word', grp).textContent = STAR_WORDS[n] || '';
+      $('#fbMsg').textContent = '';
+    } else if (e.target.closest('#fbSend')) sendRate();
+  });
+
   $('#ordersBody').addEventListener('click', (e) => {
+    const rt = e.target.closest('[data-rate]');
+    if (rt) { openRate(orders.find((x) => x.id === rt.dataset.rate)); return; }
     const inv = e.target.closest('[data-invoice]');
     if (inv) { printInvoice(orders.find((x) => x.id === inv.dataset.invoice)); return; }
     const again = e.target.closest('[data-again]');
@@ -644,7 +704,7 @@
     saveOrders();
     if (s === 'completed' || s === 'rejected') riders.delete(id);
     if (changed) {
-      toast(`Order ${id}: ${LH.statusLabel(o, s)}${s === 'ready' ? (o.svc === 'deliver' ? ' - packed and about to leave!' : ' - come and get it!') : s === 'out' ? ` 🛵 - track it live in My orders${o.otp ? `. Your delivery code is ${o.otp}` : ''}` : ''}`, s === 'rejected' ? 'bad' : 'ok');
+      toast(`Order ${id}: ${LH.statusLabel(o, s)}${s === 'ready' ? (o.svc === 'deliver' ? ' - packed and about to leave!' : ' - come and get it!') : s === 'out' ? ` 🛵 - track it live in My orders${o.otp ? `. Your delivery code is ${o.otp}` : ''}` : s === 'completed' && !o.fb ? ' - how was it? Rate it in My orders' : ''}`, s === 'rejected' ? 'bad' : 'ok');
       if (s === 'ready' && o.svc !== 'deliver') confetti();
       if (!$('#ordersDrawer').classList.contains('open')) $('#ordersDot').hidden = false;
     }

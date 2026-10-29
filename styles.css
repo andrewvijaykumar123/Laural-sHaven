@@ -301,3 +301,20 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 /* Printed invoice */
 #printArea{display:none}
 @media print{body>*:not(#printArea){display:none!important}#printArea{display:block!important;width:auto;max-width:46rem;margin:0 auto;color:#000;background:#fff;font-family:"Segoe UI",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:12mm}}
+
+/* Customer feedback: star ratings */
+.stars{display:flex;align-items:center;gap:0.125rem;margin-top:0.25rem}
+.stars button{min-width:2.75rem;min-height:2.75rem;padding:0 0.25rem;font-size:1.9rem;line-height:1;color:var(--muted);opacity:.5;transition:color .15s,opacity .15s,transform .15s}
+.stars button:hover,.stars button.on{color:var(--accent);opacity:1}
+.stars button.on{transform:scale(1.06)}
+.star-word{margin-left:0.5rem;font-size:.8rem;font-weight:700;color:var(--muted)}
+.rate-block{margin:1rem 0}
+.rate-block h3{font-size:1rem}
+.rate-block small{color:var(--muted);font-size:.78rem}
+.rate-item{padding:0.5rem 0;border-top:1px solid var(--line)}
+.rate-item>span{font-weight:600;font-size:.9rem}
+.rate-item .stars{margin-top:0}
+.rate-item .stars button{min-width:2.5rem;min-height:2.5rem;font-size:1.5rem}
+.rate-msg{margin:0.25rem 0 0.75rem;color:var(--red);font-size:.8rem;min-height:1em}
+.fb-done{margin-top:0.625rem;font-size:.82rem;color:var(--muted)}
+.fb-done b{color:var(--accent);letter-spacing:.1em}
