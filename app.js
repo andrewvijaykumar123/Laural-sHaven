@@ -12,10 +12,17 @@
 
   /* ---------- State ---------- */
   let cart = store.get('cart', {});
-  let orders = store.get('orders', []);
+  // Saved orders come from this device's storage: drop anything malformed rather than letting it break the page.
+  const loadOrders = (fallback) => {
+    const raw = store.get('orders', fallback);
+    return (Array.isArray(raw) ? raw : []).filter((o) => o && typeof o === 'object' && LH.validId(o.id) && Array.isArray(o.it) && o.it.every((l) => Array.isArray(l) && l.length === 2) && Number.isFinite(Number(o.total)))
+      .map((o) => (o.fb && !(Number.isInteger(o.fb.sr) && o.fb.sr >= 1 && o.fb.sr <= 5) ? { ...o, fb: null } : o)).slice(0, 25);
+  };
+  let orders = loadOrders([]);
   const filters = { q: '', diet: 'all' };
   let checkout = false;
   let payMethod = store.get('pay', 'upi');
+  if (!['upi', 'counter'].includes(payMethod)) payMethod = 'upi';
   let service = store.get('svc', 'dine');
   if (!['dine', 'take', 'deliver'].includes(service)) service = 'dine';
   let lastPlaced = store.get('lastPlaced', 0);
@@ -26,7 +33,7 @@
   const riders = new Map();
 
   const orderable = (id) => ITEMS.has(id) && !ITEMS.get(id).hide;
-  cart = Object.fromEntries(Object.entries(cart).filter(([id, q]) => orderable(id) && q > 0 && q <= 25));
+  cart = Object.fromEntries(Object.entries(cart && typeof cart === 'object' ? cart : {}).filter(([id, q]) => orderable(id) && Number.isInteger(q) && q > 0 && q <= 25));
   const saveCart = () => store.set('cart', cart);
   const saveOrders = () => {
     store.set('orders', orders.slice(0, 25));
@@ -198,7 +205,7 @@
         <button class="btn primary" style="width:100%" id="toCheckout" ${outLines.length ? 'disabled' : ''}>${outLines.length ? 'Remove sold-out items' : 'Checkout'}</button>`;
       return;
     }
-    const profile = store.get('profile', { n: '', p: '', em: '', addr: '' });
+    const profile = { n: '', p: '', em: '', addr: '', ...(store.get('profile', null) || {}) };
     body.innerHTML = `<button class="back" id="backCart">← Back to cart</button>
       <form class="form" id="coForm" novalidate>
         <div class="field" id="fName"><label for="coName">Your name</label><input id="coName" maxlength="40" autocomplete="name" value="${esc(profile.n)}" placeholder="e.g. Anita"><div class="msg"></div></div>
@@ -984,7 +991,7 @@
   LH.on('cfg', applyCfg);
   LH.on('menu', () => {
     const before = Object.keys(cart).length;
-    cart = Object.fromEntries(Object.entries(cart).filter(([id, q]) => orderable(id) && q > 0 && q <= 25));
+    cart = Object.fromEntries(Object.entries(cart && typeof cart === 'object' ? cart : {}).filter(([id, q]) => orderable(id) && Number.isInteger(q) && q > 0 && q <= 25));
     if (Object.keys(cart).length !== before) { saveCart(); toast('Some items in your cart are no longer on the menu.', 'bad'); }
     buildMenu();
     applyFilters();
@@ -1118,6 +1125,6 @@
   applyCfg();
   applyEvCfg();
   renderCartUI();
-  window.addEventListener('storage', () => { orders = store.get('orders', orders); });
+  window.addEventListener('storage', () => { orders = loadOrders(orders); });
   window.__lh = { get cart() { return cart; }, get orders() { return orders; }, get events() { return events; } };
 })();
