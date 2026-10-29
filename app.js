@@ -25,7 +25,8 @@
   let geoState = 'idle', geoNote = '', locReq = 0, pickCtl = null, pickToken = 0;
   const riders = new Map();
 
-  cart = Object.fromEntries(Object.entries(cart).filter(([id, q]) => ITEMS.has(id) && q > 0 && q <= 25));
+  const orderable = (id) => ITEMS.has(id) && !ITEMS.get(id).hide;
+  cart = Object.fromEntries(Object.entries(cart).filter(([id, q]) => orderable(id) && q > 0 && q <= 25));
   const saveCart = () => store.set('cart', cart);
   const saveOrders = () => {
     store.set('orders', orders.slice(0, 25));
@@ -131,7 +132,7 @@
 
   /* ---------- Cart ---------- */
   function change(id, delta, sourceEl) {
-    if (!ITEMS.has(id) || (delta > 0 && isOut(id))) return;
+    if (!orderable(id) || (delta > 0 && isOut(id))) return;
     const next = Math.min(25, Math.max(0, (cart[id] || 0) + delta));
     if (next) cart[id] = next; else delete cart[id];
     saveCart();
@@ -613,7 +614,7 @@
     if (!o) return;
     let added = 0; let skipped = 0;
     o.it.forEach(([item, q]) => {
-      if (!ITEMS.has(item) || isOut(item)) { skipped++; return; }
+      if (!orderable(item) || isOut(item)) { skipped++; return; }
       cart[item] = Math.min(25, (cart[item] || 0) + q);
       added++;
     });
@@ -700,7 +701,7 @@
   const cafePhone = () => (window.LHMail && window.LHMail.CAFE && window.LHMail.CAFE.phone) || '';
   let events = store.get('events', []).map((e) => {
     const v = LH.validateEvent(e);
-    return v ? { ...v, status: EVS[e.status] ? e.status : 'pending', statusTs: Number(e.statusTs) || 0, reason: LH.clean(e.reason, 80) } : null;
+    return v ? { ...v, status: EVS[e.status] ? e.status : 'pending', statusTs: Number(e.statusTs) || 0, reason: LH.clean(e.reason, 80), moved: LH.validMove(e.moved) } : null;
   }).filter(Boolean);
   const saveEvents = () => {
     store.set('events', events.slice(0, 25));
@@ -798,6 +799,7 @@
         <div class="head"><span class="oid">${esc(e.id)}</span><span class="badge" style="background:${st.color}">${esc(st.label)}</span></div>
         <h3>${t.icon} ${esc(t.label)}</h3>
         <p class="ev-when">📅 ${esc(evWhen(e))}</p>
+        ${e.moved && e.moved.od ? `<p class="ev-meta">🔁 Rescheduled from ${esc(evDay(e.moved.od))} · ${esc(LH.eventRange(e.moved.os, e.moved.oh))}</p>` : ''}
         <p class="ev-meta">${e.g} guest${e.g === 1 ? '' : 's'} · ${esc(e.n)}${e.nt ? ` · “${esc(e.nt)}”` : ''}</p>
         ${quoteRows(e.h, e.dec)}
         ${e.status === 'declined' || e.status === 'cancelled' ? `<div class="rej">${e.status === 'declined' ? 'Sorry, we could not take this booking' : 'This booking was cancelled'}${e.reason ? `: ${esc(e.reason)}` : '.'}</div>` : ''}
@@ -929,13 +931,18 @@
     if ($('#ordersDrawer').classList.contains('open')) renderOrders();
     if ($('#eventsDrawer').classList.contains('open')) renderEvents();
   });
-  LH.on('evstatus', ({ id, s, r, ts }) => {
+  LH.on('evstatus', ({ id, s, r, ts, mv }) => {
     const e = events.find((x) => x.id === id);
     if (!e || ts < e.statusTs) return;
     const changed = e.status !== s;
+    const moved = !!mv && (e.d !== mv.d || e.st !== mv.st || e.h !== mv.h);
     e.status = s; e.statusTs = ts; e.reason = r || '';
+    if (mv) Object.assign(e, LH.moveEvent(e, mv), { moved: mv.od ? mv : e.moved });
     saveEvents();
-    if (changed) {
+    if (moved) {
+      toast(`Booking ${id} moved to ${evWhen(e)}`, 'ok');
+      if (!$('#eventsDrawer').classList.contains('open')) $('#eventsDot').hidden = false;
+    } else if (changed) {
       toast(`Booking ${id}: ${EVS[s].label}`, s === 'declined' || s === 'cancelled' ? 'bad' : 'ok');
       if (!$('#eventsDrawer').classList.contains('open')) $('#eventsDot').hidden = false;
     }
@@ -975,6 +982,17 @@
     if ($('#ordersDrawer').classList.contains('open')) renderOrders();
   });
   LH.on('cfg', applyCfg);
+  LH.on('menu', () => {
+    const before = Object.keys(cart).length;
+    cart = Object.fromEntries(Object.entries(cart).filter(([id, q]) => orderable(id) && q > 0 && q <= 25));
+    if (Object.keys(cart).length !== before) { saveCart(); toast('Some items in your cart are no longer on the menu.', 'bad'); }
+    buildMenu();
+    applyFilters();
+    syncMenuText();
+    $$('[data-stat]').forEach((el) => { el.textContent = el.dataset.count; });
+    buildMarquee();
+    renderCartUI();
+  });
   LH.on('relay', ({ ops, queued }) => {
     const pill = $('#livePill');
     pill.classList.toggle('up', ops);
@@ -1002,12 +1020,27 @@
     $$('.reveal:not(.in)').forEach((el) => io.observe(el));
   }
 
+  function buildMarquee() {
+    const shown = [...ITEMS.values()].filter((i) => !i.hide);
+    const names = shown.filter((i) => i.best).concat(shown.filter((i, n) => n % 7 === 0));
+    const row = names.map((i) => `<span><b>${i.icon}</b>${esc(i.name)}</span>`).join('');
+    $('#marquee').innerHTML = row + row;
+  }
+
+  // Item and category counts in the hero follow the live menu.
+  function syncMenuText() {
+    const s = { items: [...ITEMS.values()].filter((i) => !i.hide).length, cats: MENU.filter((c) => c.items.length).length };
+    const lead = $('#menuCount');
+    if (lead) lead.textContent = s.items;
+    $('#search').placeholder = `Search ${s.items} dishes, drinks, combos...`;
+    $$('[data-stat]').forEach((el) => { el.dataset.count = s[el.dataset.stat]; });
+  }
+
   function setupHero() {
     const emojis = ['🍔', '🥟', '🌯', '🍟', '🍗', '☕', '🥤', '🍢', '🥗', '🍳', '🍫', '🥭'];
     $('#floaters').innerHTML = emojis.map((e, i) => `<span style="--x:${(i * 83) % 96}%;--y:${(i * 37 + 8) % 80}%;--s:${28 + (i % 4) * 14}px;--d:${4 + (i % 5)}s;--b:${i % 3 ? 0 : '2px'}">${e}</span>`).join('');
-    const names = [...ITEMS.values()].filter((i) => i.best).concat([...ITEMS.values()].filter((i, n) => n % 7 === 0));
-    const row = names.map((i) => `<span><b>${i.icon}</b>${esc(i.name)}</span>`).join('');
-    $('#marquee').innerHTML = row + row;
+    buildMarquee();
+    syncMenuText();
     $$('[data-count]').forEach((el) => {
       const target = Number(el.dataset.count);
       const start = performance.now();
