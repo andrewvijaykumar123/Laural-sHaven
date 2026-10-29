@@ -919,6 +919,16 @@
     evWas = on;
   }
   LH.on('evcfg', applyEvCfg);
+  // The owner cleared all storefront data: forget saved orders and bookings placed before that moment.
+  LH.on('wipe', ({ ts }) => {
+    if (ts <= Number(store.get('wipeTs', 0))) return;
+    store.set('wipeTs', ts);
+    orders = orders.filter((o) => o.ts > ts);
+    events = events.filter((e) => e.ts > ts);
+    saveOrders(); saveEvents();
+    if ($('#ordersDrawer').classList.contains('open')) renderOrders();
+    if ($('#eventsDrawer').classList.contains('open')) renderEvents();
+  });
   LH.on('evstatus', ({ id, s, r, ts }) => {
     const e = events.find((x) => x.id === id);
     if (!e || ts < e.statusTs) return;
