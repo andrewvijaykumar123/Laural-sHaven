@@ -460,19 +460,18 @@
   function showSuccess(o) {
     const pay = o.pay === 'upi'
       ? `<div class="pay-note">Scan with any UPI app and pay <b>${fmt(o.total)}</b>. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <div class="qr"><img id="qrImg" alt="UPI QR code for ${fmt(o.total)}" width="240" height="240"><small>${esc(UPI.id)}</small></div>
-         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Open UPI app</a></div>`
+         <figure class="qr-card">
+           <div class="qr-amt"><small>Amount to pay</small><b>${fmt(o.total)}</b></div>
+           <div class="qr-frame"><img id="qrImg" src="assets/payment-upi.jpeg" alt="Paytm UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1039" height="1600" decoding="async"></div>
+           <figcaption>Enter <b>${fmt(o.total)}</b> after scanning and add <b>${esc(o.id)}</b> as the note.</figcaption>
+         </figure>
+         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Open UPI app with ${fmt(o.total)}</a></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
       ${otpBox(o)}
       ${pay}
       <div class="row-btns"><button class="btn ghost" id="trackNow">Track my order</button><button class="btn ghost" data-modal-close>Keep browsing</button></div>`);
-    const img = $('#qrImg');
-    if (img) {
-      img.addEventListener('error', () => { img.src = 'assets/payment-upi.jpeg'; }, { once: true });
-      try { img.src = window.LH_QR(upiLink(o)); } catch (e) { img.src = 'assets/payment-upi.jpeg'; }
-    }
     $('#trackNow').addEventListener('click', () => { closeModal(); openDrawer('ordersDrawer'); });
   }
 
