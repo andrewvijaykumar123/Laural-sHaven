@@ -297,3 +297,7 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 .otp-box small{display:block;color:var(--muted);font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .otp-box b{display:block;font-family:ui-monospace,Consolas,monospace;font-size:2rem;letter-spacing:.35em;padding-left:.35em;color:var(--accent);line-height:1.3}
 .otp-box span{display:block;color:var(--muted);font-size:.78rem}
+
+/* Printed invoice */
+#printArea{display:none}
+@media print{body>*:not(#printArea){display:none!important}#printArea{display:block!important;width:auto;max-width:46rem;margin:0 auto;color:#000;background:#fff;font-family:"Segoe UI",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:12mm}}

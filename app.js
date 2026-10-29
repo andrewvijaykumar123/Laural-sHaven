@@ -517,11 +517,25 @@
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
         ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
         ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
+        ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Invoice</button>`}
       </article>`;
     }).join('') + (finished ? '<button class="btn ghost" style="width:100%" id="clearDone">Clear finished orders</button>' : '');
   }
 
+  /* Invoice (no GST) for the customer's own order, printed or saved as PDF from the browser's print dialog. */
+  function printInvoice(o) {
+    if (!o || !window.LHMail) return;
+    const area = $('#printArea');
+    area.innerHTML = window.LHMail.invoiceHtml(LH, o, { paid: !!o.payVerified || o.status === 'completed' });
+    const prev = document.title;
+    document.title = `Invoice ${o.id}`;
+    window.print();
+    document.title = prev;
+  }
+
   $('#ordersBody').addEventListener('click', (e) => {
+    const inv = e.target.closest('[data-invoice]');
+    if (inv) { printInvoice(orders.find((x) => x.id === inv.dataset.invoice)); return; }
     const again = e.target.closest('[data-again]');
     if (again) { reorder(again.dataset.again); return; }
     const tr = e.target.closest('[data-track]');
