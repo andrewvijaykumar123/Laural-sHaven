@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261029g">
+  <link rel="stylesheet" href="styles.css?v=20261029i">
 </head>
 <body>
   <noscript><p style="padding:24px;text-align:center;font-family:sans-serif">Laural's Haven needs JavaScript to show the menu and send your order. Please turn it on and reload.</p></noscript>
@@ -26,6 +26,7 @@
     <a class="brand" href="#top" aria-label="Laural's Haven home"><span class="brand-mark">🍃</span><span>Laural's <b>Haven</b></span></a>
     <div class="top-actions">
       <span class="live-pill" id="livePill" title="Realtime connection"><i></i><span>Connecting</span></span>
+      <button class="icon-btn" id="eventsBtn" aria-label="Book an event" title="Book an event" hidden>🎉<span class="dot" id="eventsDot" hidden></span></button>
       <button class="icon-btn" id="ordersBtn" aria-label="My orders" title="My orders">🧾<span class="dot" id="ordersDot" hidden></span></button>
       <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌗</button>
       <button class="cart-btn" id="cartBtn" aria-label="Open cart">🛒<span>Cart</span><b id="cartCount">0</b></button>
@@ -44,7 +45,9 @@
         <div class="hero-cta reveal">
           <a class="btn primary" href="#menu">Explore the menu</a>
           <button class="btn ghost" id="heroOrders">Track an order</button>
+          <button class="btn ghost" id="heroEvents" hidden>🎉 Book an event</button>
         </div>
+        <p class="deliv-note reveal" id="evHeroNote" hidden>🎉 Host your birthday, anniversary or meetup with us · ₹1,000 per hour</p>
         <p class="deliv-note reveal" id="delivNote" hidden>🛵 Home delivery up to 15 km (free within 5 km) · follow your order live on the map</p>
         <ul class="stats reveal">
           <li><b data-count="85">0</b><span>Menu items</span></li>
@@ -92,6 +95,12 @@
     <div class="drawer-body" id="ordersBody"></div>
   </aside>
 
+  <aside class="drawer" id="eventsDrawer" aria-label="Event bookings" aria-hidden="true" inert>
+    <header><h2>Events &amp; parties</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div class="drawer-body" id="eventsBody"></div>
+    <footer id="eventsFoot"></footer>
+  </aside>
+
   <div class="trackview" id="trackView" hidden role="dialog" aria-modal="true" aria-labelledby="tvTitle">
     <header><button class="icon-btn" id="tvClose" aria-label="Close tracking">✕</button><div><h2 id="tvTitle">Track order</h2><p id="tvSub" aria-live="polite"></p></div></header>
     <div class="tv-map"><div class="lh-map tall" id="tvMap"></div></div>
@@ -104,9 +113,9 @@
 
   <script src="fb-config.js"></script>
   <script src="fb.js"></script>
-  <script src="core.js?v=20261029g"></script>
-  <script src="map.js?v=20261029g"></script>
-<script src="mailtpl.js?v=20261029g"></script>
-  <script src="app.js?v=20261029g"></script>
+  <script src="core.js?v=20261029i"></script>
+  <script src="map.js?v=20261029i"></script>
+<script src="mailtpl.js?v=20261029i"></script>
+  <script src="app.js?v=20261029i"></script>
 </body>
 </html>

@@ -362,6 +362,7 @@
     document.body.style.overflow = 'hidden';
     if (id === 'cartDrawer') { checkout = false; renderCartDrawer(); renderCartUI(); }
     if (id === 'ordersDrawer') { renderOrders(); $('#ordersDot').hidden = true; }
+    if (id === 'eventsDrawer') { if (!evOn()) evView = 'mine'; renderEvents(); $('#eventsDot').hidden = true; }
     setTimeout(() => { const f = $('button, input', d); if (f) f.focus(); }, 80);
   }
   function closeDrawers(silent) {
@@ -694,6 +695,244 @@
   $('#tvClose').addEventListener('click', closeTrack);
   $('#tvFit').addEventListener('click', () => { userMoved = false; if (trackCtl) trackCtl.fit(); });
 
+  /* ---------- Event bookings (parties, celebrations, meetups) ---------- */
+  const EV = LH.EVENT;
+  const EVS = LH.EVENT_STATUS;
+  const cafePhone = () => (window.LHMail && window.LHMail.CAFE && window.LHMail.CAFE.phone) || '';
+  let events = store.get('events', []).map((e) => {
+    const v = LH.validateEvent(e);
+    return v ? { ...v, status: EVS[e.status] ? e.status : 'pending', statusTs: Number(e.statusTs) || 0, reason: LH.clean(e.reason, 80) } : null;
+  }).filter(Boolean);
+  const saveEvents = () => {
+    store.set('events', events.slice(0, 25));
+    LH.watchEv(events.filter((e) => ['pending', 'confirmed'].includes(e.status)).map((e) => e.id));
+  };
+  saveEvents();
+  let lastEvent = 0;
+  let evView = 'book';
+  const addDays = (n) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return LH.dateKey(d); };
+  const evForm = { ty: 'bday', d: addDays(1), st: 18 * 60, h: 3, g: 10, dec: false, nt: '', n: undefined, p: '' };
+  const evOn = () => LH.getEvCfg().on;
+  const evDay = (s) => LH.parseDateKey(s).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const evWhen = (e) => `${evDay(e.d)} · ${LH.eventRange(e.st, e.h)}`;
+  const hrs = (h) => `${h} hour${h === 1 ? '' : 's'}`;
+  const maxHours = (st) => Math.min(EV.MAX_H, Math.floor((EV.CLOSE - st) / 60));
+
+  const quoteRows = (h, dec) => {
+    const q = LH.eventQuote(h, dec);
+    return `<dl class="ev-quote"><div><dt>Venue · ${hrs(q.hours)} × ${fmt(EV.RATE)}</dt><dd>${fmt(q.rent)}</dd></div>
+      <div><dt>Post-event cleaning</dt><dd>${fmt(q.clean)}</dd></div>
+      ${q.decor ? `<div><dt>Basic decoration</dt><dd>${fmt(q.decor)}</dd></div>` : ''}
+      <div class="tot"><dt>Total</dt><dd>${fmt(q.total)}</dd></div></dl>`;
+  };
+
+  function evFormHTML() {
+    const f = evForm;
+    if (f.n === undefined) { const prof = store.get('profile', {}); f.n = prof.n || ''; f.p = prof.p || ''; }
+    if (!LH.inEventWindow(f.d)) f.d = addDays(1);
+    const types = LH.EVENT_TYPES.map((t) => `<option value="${t.id}"${f.ty === t.id ? ' selected' : ''}>${t.icon} ${esc(t.label)}</option>`).join('');
+    const starts = [];
+    for (let m = EV.OPEN; m <= EV.LAST_START; m += EV.STEP) starts.push(`<option value="${m}"${m === f.st ? ' selected' : ''}>${LH.clock(m)}</option>`);
+    return `<form class="form ev-form" id="evForm" novalidate>
+      <div class="pay-note">🎉 <b>${fmt(EV.RATE)}</b> per hour · <b>${fmt(EV.CLEAN)}</b> post-event cleaning · optional basic decoration <b>${fmt(EV.DECOR)}</b>. You pay at the cafe on the day.</div>
+      <div class="field"><label for="evType">Type of event</label><select id="evType">${types}</select></div>
+      <div class="field" id="fEvDate"><label for="evDate">Date</label><input id="evDate" type="date" min="${addDays(0)}" max="${addDays(EV.DAYS)}" value="${esc(f.d)}"><div class="msg"></div></div>
+      <div class="ev-two">
+        <div class="field"><label for="evStart">Start time</label><select id="evStart">${starts.join('')}</select></div>
+        <div class="field"><label for="evHours">Duration</label><select id="evHours"></select></div>
+      </div>
+      <div class="ev-avail" id="evAvail" role="status" aria-live="polite"></div>
+      <div class="field" id="fEvGuests"><label for="evGuests">Number of guests</label><input id="evGuests" type="number" inputmode="numeric" min="1" max="${EV.MAX_GUESTS}" value="${esc(f.g)}"><div class="msg"></div></div>
+      <div class="field" id="fEvName"><label for="evName">Your name</label><input id="evName" maxlength="40" autocomplete="name" value="${esc(f.n)}" placeholder="e.g. Anita"><div class="msg"></div></div>
+      <div class="field" id="fEvPhone"><label for="evPhone">Mobile number</label><input id="evPhone" inputmode="tel" maxlength="14" autocomplete="tel" value="${esc(f.p)}" placeholder="10-digit number"><div class="msg"></div></div>
+      <label class="ev-check"><input type="checkbox" id="evDecor"${f.dec ? ' checked' : ''}><span>🎈 Basic decoration <b>+${fmt(EV.DECOR)}</b></span></label>
+      <div class="field"><label for="evNote">Special requests (optional)</label><textarea id="evNote" rows="2" maxlength="200" placeholder="Cake, theme, seating, music...">${esc(f.nt)}</textarea></div>
+      <div id="evQuote"></div>
+    </form>`;
+  }
+
+  function fillHours() {
+    const sel = $('#evHours');
+    if (!sel) return;
+    const max = maxHours(evForm.st);
+    if (evForm.h > max) evForm.h = max;
+    sel.innerHTML = Array.from({ length: max - EV.MIN_H + 1 }, (_, i) => EV.MIN_H + i).map((h) => `<option value="${h}"${h === evForm.h ? ' selected' : ''}>${hrs(h)}</option>`).join('');
+  }
+
+  const slotText = ([a, b]) => `${LH.clock(a)} - ${LH.clock(b)}`;
+  function evClash() {
+    return LH.inEventWindow(evForm.d) ? LH.slotsClash(evForm.st, evForm.h, LH.getEvCfg().busy[evForm.d]) : null;
+  }
+
+  function updateEvForm() {
+    if (!$('#evForm')) return;
+    const f = evForm;
+    const av = $('#evAvail');
+    if (!LH.inEventWindow(f.d)) av.innerHTML = '';
+    else {
+      const busy = LH.getEvCfg().busy[f.d] || [];
+      const clash = LH.slotsClash(f.st, f.h, busy);
+      av.innerHTML = clash
+        ? `<div class="ev-bad">⛔ That time overlaps an existing booking (${esc(slotText(clash))}). Please pick another time.</div>`
+        : busy.length
+          ? `<div class="ev-ok">✅ Your slot is free. Already booked that day: ${busy.map((s) => esc(slotText(s))).join(', ')}.</div>`
+          : '<div class="ev-ok">✅ That day is open. We confirm every booking personally.</div>';
+    }
+    $('#evQuote').innerHTML = quoteRows(f.h, f.dec);
+    const total = $('#evTotal');
+    if (total) total.textContent = fmt(LH.eventQuote(f.h, f.dec).total);
+    const send = $('#evSend');
+    if (send && !send.dataset.busy) send.disabled = !!evClash();
+  }
+
+  const evDone = (e) => ['declined', 'cancelled', 'completed'].includes(e.status);
+  function evListHTML() {
+    if (!events.length) return '<div class="empty-cart"><span class="big">🎉</span><h3>No bookings yet</h3><p>Event bookings you make on this device appear here.</p></div>';
+    const tel = cafePhone();
+    return events.map((e) => {
+      const st = EVS[e.status] || EVS.pending;
+      const t = LH.EVENT_TYPE.get(e.ty);
+      const foot = e.status === 'pending' ? 'Awaiting our confirmation. You pay at the cafe on the day.'
+        : e.status === 'confirmed' ? `✅ Your slot is reserved. Please pay ${fmt(e.total)} at the cafe on the day.`
+          : e.status === 'completed' ? 'Thank you for celebrating with us!' : '';
+      return `<article class="order-card ev-card" data-ev="${esc(e.id)}">
+        <div class="head"><span class="oid">${esc(e.id)}</span><span class="badge" style="background:${st.color}">${esc(st.label)}</span></div>
+        <h3>${t.icon} ${esc(t.label)}</h3>
+        <p class="ev-when">📅 ${esc(evWhen(e))}</p>
+        <p class="ev-meta">${e.g} guest${e.g === 1 ? '' : 's'} · ${esc(e.n)}${e.nt ? ` · “${esc(e.nt)}”` : ''}</p>
+        ${quoteRows(e.h, e.dec)}
+        ${e.status === 'declined' || e.status === 'cancelled' ? `<div class="rej">${e.status === 'declined' ? 'Sorry, we could not take this booking' : 'This booking was cancelled'}${e.reason ? `: ${esc(e.reason)}` : '.'}</div>` : ''}
+        ${foot ? `<div class="verify ${e.status === 'confirmed' ? 'ok' : ''}">${foot}</div>` : ''}
+        ${!evDone(e) && tel ? `<div class="verify">To change or cancel, call <a href="tel:${esc(tel)}">${esc(tel)}</a>.</div>` : ''}
+      </article>`;
+    }).join('') + (events.some(evDone) ? '<button class="btn ghost" style="width:100%" id="evClear">Clear finished bookings</button>' : '');
+  }
+
+  function renderEvents() {
+    const body = $('#eventsBody');
+    const foot = $('#eventsFoot');
+    const seg = `<div class="seg" role="group" aria-label="Event bookings"><button type="button" data-evv="book" class="${evView === 'book' ? 'on' : ''}">Book an event</button><button type="button" data-evv="mine" class="${evView === 'mine' ? 'on' : ''}">My bookings${events.length ? ` (${events.length})` : ''}</button></div>`;
+    if (evView === 'book' && evOn()) {
+      body.innerHTML = `${seg}<div style="margin-top:1rem">${evFormHTML()}</div>`;
+      foot.hidden = false;
+      foot.innerHTML = `<div class="sum"><span>Total</span><strong id="evTotal"></strong></div><button class="btn primary" style="width:100%" id="evSend" type="button">Request booking</button>`;
+      fillHours();
+      updateEvForm();
+      return;
+    }
+    foot.hidden = true;
+    const tel = cafePhone();
+    const closed = evView === 'book' ? `<div class="empty-cart"><span class="big">🎉</span><h3>Bookings are closed</h3><p>We are not taking event bookings online right now.${tel ? ` Please call us on ${esc(tel)}.` : ''}</p></div>` : evListHTML();
+    body.innerHTML = `${seg}<div style="margin-top:1rem">${closed}</div>`;
+  }
+
+  const nowMinutes = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+
+  async function sendEvent() {
+    if (!evOn()) { toast('Event bookings are closed right now.', 'bad'); return; }
+    const f = evForm;
+    const name = LH.clean(f.n, 40);
+    const phone = String(f.p || '').replace(/[^\d+]/g, '');
+    const digits = phone.replace(/\D/g, '');
+    const g = Math.floor(Number(f.g));
+    const dateOk = LH.inEventWindow(f.d);
+    const gOk = g >= 1 && g <= EV.MAX_GUESTS;
+    const phOk = digits.length >= 10 && digits.length <= 13;
+    setErr('fEvDate', dateOk ? '' : `Choose a date within the next ${EV.DAYS} days`);
+    setErr('fEvGuests', gOk ? '' : `Enter between 1 and ${EV.MAX_GUESTS} guests`);
+    setErr('fEvName', name ? '' : 'Please enter your name');
+    setErr('fEvPhone', phOk ? '' : 'Enter a valid mobile number');
+    if (!dateOk || !gOk || !name || !phOk) { const bad = $('#evForm .field.err input'); if (bad) bad.focus(); return; }
+    if (evClash()) { toast('That time is already booked. Please pick another time.', 'bad'); return; }
+    if (f.d === addDays(0) && f.st <= nowMinutes()) { toast('That start time has already passed today.', 'bad'); return; }
+    if (Date.now() - lastEvent < 15000) { toast('Please wait a few seconds before sending another booking.', 'bad'); return; }
+    const btn = $('#evSend');
+    btn.disabled = true;
+    btn.dataset.busy = '1';
+    btn.textContent = 'Sending securely...';
+    try {
+      const ev = await LH.publishEvent({ ty: f.ty, d: f.d, st: f.st, h: f.h, g, dec: f.dec, nt: f.nt, n: name, p: phone });
+      lastEvent = Date.now();
+      store.set('profile', { ...store.get('profile', {}), n: name, p: phone });
+      events.unshift({ ...ev, status: 'pending', statusTs: 0, reason: '' });
+      saveEvents();
+      f.nt = '';
+      evView = 'mine';
+      closeDrawers(true);
+      showEventSuccess(events[0]);
+      confetti();
+    } catch (err) {
+      toast(err && err.code === 'permission-denied' ? 'Event bookings are not available right now. Please call us.' : 'Could not send the booking. Please try again.', 'bad');
+      delete btn.dataset.busy;
+      btn.textContent = 'Request booking';
+      btn.disabled = false;
+      updateEvForm();
+    }
+  }
+
+  function showEventSuccess(e) {
+    const t = LH.EVENT_TYPE.get(e.ty);
+    openModal(`<h2 id="modalTitle">Booking requested 🎉</h2>
+      <p style="color:var(--muted)">Your booking ID is <span class="oid">${esc(e.id)}</span>. It is not final until we confirm it. The status updates live in My bookings.</p>
+      <div class="pay-note"><b>${t.icon} ${esc(t.label)}</b><br>${esc(evWhen(e))} · ${e.g} guest${e.g === 1 ? '' : 's'}<br>Total <b>${fmt(e.total)}</b>, payable at the cafe on the day.</div>
+      <div class="row-btns"><button class="btn ghost" id="evMine">View my bookings</button><button class="btn ghost" data-modal-close>Close</button></div>`);
+    $('#evMine').addEventListener('click', () => { closeModal(); openDrawer('eventsDrawer'); });
+  }
+
+  function onEvInput(ev) {
+    const t = ev.target;
+    if (evView !== 'book') return;
+    switch (t.id) {
+      case 'evType': evForm.ty = t.value; break;
+      case 'evDate': evForm.d = t.value; break;
+      case 'evStart': evForm.st = Number(t.value); fillHours(); break;
+      case 'evHours': evForm.h = Number(t.value); break;
+      case 'evGuests': evForm.g = t.value; break;
+      case 'evName': evForm.n = t.value; break;
+      case 'evPhone': evForm.p = t.value; break;
+      case 'evDecor': evForm.dec = t.checked; break;
+      case 'evNote': evForm.nt = t.value; break;
+      default: return;
+    }
+    $$('#evForm .field').forEach((f) => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
+    updateEvForm();
+  }
+  $('#eventsBody').addEventListener('input', onEvInput);
+  $('#eventsBody').addEventListener('change', onEvInput);
+  $('#eventsBody').addEventListener('click', (e) => {
+    const v = e.target.closest('[data-evv]');
+    if (v) { evView = v.dataset.evv; renderEvents(); return; }
+    if (e.target.closest('#evClear')) { events = events.filter((x) => !evDone(x)); saveEvents(); renderEvents(); }
+  });
+  $('#eventsFoot').addEventListener('click', (e) => { if (e.target.closest('#evSend')) sendEvent(); });
+  const openEvents = () => { if (!evOn()) evView = 'mine'; openDrawer('eventsDrawer'); };
+  $('#eventsBtn').addEventListener('click', openEvents);
+  $('#heroEvents').addEventListener('click', () => { evView = 'book'; openDrawer('eventsDrawer'); });
+
+  let evWas = null;
+  function applyEvCfg() {
+    const on = evOn();
+    $('#eventsBtn').hidden = !(on || events.length);
+    $('#heroEvents').hidden = !on;
+    $('#evHeroNote').hidden = !on;
+    const open = $('#eventsDrawer').classList.contains('open');
+    if (open && evView === 'book') { if (evWas !== null && evWas !== on) renderEvents(); else updateEvForm(); }
+    evWas = on;
+  }
+  LH.on('evcfg', applyEvCfg);
+  LH.on('evstatus', ({ id, s, r, ts }) => {
+    const e = events.find((x) => x.id === id);
+    if (!e || ts < e.statusTs) return;
+    const changed = e.status !== s;
+    e.status = s; e.statusTs = ts; e.reason = r || '';
+    saveEvents();
+    if (changed) {
+      toast(`Booking ${id}: ${EVS[s].label}`, s === 'declined' || s === 'cancelled' ? 'bad' : 'ok');
+      if (!$('#eventsDrawer').classList.contains('open')) $('#eventsDot').hidden = false;
+    }
+    if ($('#eventsDrawer').classList.contains('open') && evView === 'mine') renderEvents();
+  });
+
   /* ---------- Live events from the admin console ---------- */
   LH.on('status', ({ id, s, r, ts }) => {
     const o = orders.find((x) => x.id === id);
@@ -835,7 +1074,8 @@
   setupHero();
   spy();
   applyCfg();
+  applyEvCfg();
   renderCartUI();
   window.addEventListener('storage', () => { orders = store.get('orders', orders); });
-  window.__lh = { get cart() { return cart; }, get orders() { return orders; } };
+  window.__lh = { get cart() { return cart; }, get orders() { return orders; }, get events() { return events; } };
 })();

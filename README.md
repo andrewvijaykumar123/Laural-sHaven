@@ -13,6 +13,7 @@ Both sites share one Firebase project (Firestore + Authentication, free Spark pl
 - Only the admin account can read orders, change status, verify payment, and edit the open/closed and sold-out settings (see `firestore.rules` in the admin repo).
 - Customers follow their order through a status document readable by order id only (no personal data).
 - When an order is completed, the customer can rate the service and each product (1 to 5 stars) and leave a comment, once per order. Feedback is stored privately and appears in the admin console Feedback tab.
+- Events & parties: when the admin turns bookings on, customers can request the cafe for a celebration (Rs 1000/hour + Rs 500 cleaning + optional Rs 500 decoration, pay at the cafe), see taken time slots, and follow the status in My bookings.
 - Totals are recomputed from the embedded menu by the admin console; all user text is sanitised and escaped.
 - Offline writes queue in the browser cache and sync when the connection returns.
 
