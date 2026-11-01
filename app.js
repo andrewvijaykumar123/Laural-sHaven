@@ -465,8 +465,7 @@
 
   function showSuccess(o) {
     const pay = o.pay === 'upi'
-      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> to the number below from any UPI app (Google Pay, PhonePe, Paytm, BHIM...). Add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <div class="upi-box"><small>Pay to this phone number</small><b id="upiPhone">${esc(UPI.phone)}</b><button type="button" class="btn primary" id="copyUpi">Copy number</button></div>`
+      ? `<div class="upi-box"><small>Pay to this phone number</small><b id="upiPhone">${esc(UPI.phone)}</b><button type="button" class="btn primary" id="copyUpi">Copy number</button></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
