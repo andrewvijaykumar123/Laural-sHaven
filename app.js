@@ -459,8 +459,8 @@
     }
   }
 
-  // Literal '@' and a two-decimal amount, as UPI apps expect.
-  const upiLink = (o) => `upi://pay?pa=${UPI.id}&pn=${encodeURIComponent(UPI.name)}&am=${Number(o.total).toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
+  // Same payload as the cafe's QR: Google Pay declines links to this personal VPA that carry an amount or note ("bank limit exceeded").
+  const upiLink = () => `upi://pay?pa=${UPI.id}&pn=${encodeURIComponent(UPI.name)}&aid=${UPI.aid}`;
 
   // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
   const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
@@ -468,8 +468,8 @@
 
   function showSuccess(o) {
     const pay = o.pay === 'upi'
-      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> with any UPI app and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Pay ${fmt(o.total)} in your UPI app</a></div>
+      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> with any UPI app: enter the amount and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
+         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink())}">Open UPI app to pay ${fmt(o.total)}</a></div>
          <figure class="qr-card">
            <div class="qr-frame"><img src="assets/payment-upi.jpeg" alt="UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1152" height="1600" decoding="async"></div>
            <figcaption>Or scan this code, enter <b>${fmt(o.total)}</b> and add <b>${esc(o.id)}</b> as the note.</figcaption>
