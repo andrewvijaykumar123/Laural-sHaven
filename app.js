@@ -465,13 +465,8 @@
 
   function showSuccess(o) {
     const pay = o.pay === 'upi'
-      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> with any UPI app: enter the amount and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <figure class="qr-card">
-           <div class="qr-frame"><img src="assets/payment-upi.jpeg" alt="UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1152" height="1600" decoding="async"></div>
-           <figcaption>Or scan this code, enter <b>${fmt(o.total)}</b> and add <b>${esc(o.id)}</b> as the note.</figcaption>
-           <a class="btn ghost upi-save" href="assets/payment-upi.jpeg" download="Laurals-Haven-UPI-QR.jpeg">Save QR, then scan it from your gallery</a>
-         </figure>
-         <div class="upi-box"><small>UPI ID</small><b id="upiId">${esc(UPI.id)}</b><button type="button" class="btn ghost" id="copyUpi">Copy UPI ID</button></div>`
+      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> to the number below from any UPI app (Google Pay, PhonePe, Paytm, BHIM...). Add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
+         <div class="upi-box"><small>Pay to this phone number</small><b id="upiPhone">${esc(UPI.phone)}</b><button type="button" class="btn primary" id="copyUpi">Copy number</button></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
@@ -482,7 +477,7 @@
     $('#trackNow').addEventListener('click', () => { closeModal(); openDrawer('ordersDrawer'); });
     const copy = $('#copyUpi');
     if (copy) copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(UPI.id); toast('UPI ID copied. Paste it in your UPI app.', 'ok'); } catch (err) { toast(`UPI ID: ${UPI.id}`); }
+      try { await navigator.clipboard.writeText(UPI.phone); toast('Number copied. Paste it in your UPI app.', 'ok'); } catch (err) { toast(`Pay to ${UPI.phone}`); }
     });
     cxSync();
   }
