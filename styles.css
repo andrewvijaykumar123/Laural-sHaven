@@ -180,10 +180,6 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 .qr-frame img{display:block;width:100%;height:auto}
 .qr-card figcaption{max-width:20rem;text-align:center;color:var(--muted);font-size:.84rem;line-height:1.45}
 .qr-card figcaption b{color:var(--text)}
-.row-btns.upi-open{display:none}
-@media (max-width:800px){.row-btns.upi-open{display:grid}}
-.upi-apps{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
-.upi-apps .btn{padding-inline:.5rem}
 .upi-box{display:grid;justify-items:center;gap:.5rem;padding:1rem;margin-bottom:.875rem;border-radius:.8125rem;background:var(--card);border:1px solid var(--line);text-align:center}
 .upi-box small{font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .upi-box b{font-family:var(--serif);font-size:1.35rem;color:var(--accent);overflow-wrap:anywhere;user-select:all}
