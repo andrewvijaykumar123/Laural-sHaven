@@ -481,7 +481,7 @@
     cxSync();
   }
 
-  /* ---------- Cancel within 3 minutes, with a live countdown. After that the customer has to phone the cafe. ---------- */
+  /* ---------- Cancel within 5 minutes, with a live countdown. After that the customer has to phone the cafe. ---------- */
   const CX = LH.CANCEL;
   const CX_C = 2 * Math.PI * 19;
   const shopPhone = () => (window.LHMail && window.LHMail.CAFE && window.LHMail.CAFE.phone) || '';
@@ -500,7 +500,7 @@
         <div class="cx-txt"><strong>Changed your mind?</strong><span>You can cancel this order for the next <b role="timer" data-cxleft="${esc(o.id)}">${mmss(left)}</b>.</span></div>
         <button type="button" class="btn cx-btn" data-cancel="${esc(o.id)}">Cancel order</button></div>`;
     }
-    const why = CX.FROM.includes(o.status) ? 'The 3-minute cancel window has closed.' : 'Your order is already being prepared.';
+    const why = CX.FROM.includes(o.status) ? 'The 5-minute cancel window has closed.' : 'Your order is already being prepared.';
     return `<div class="cx cx-call"><span class="cx-ico" aria-hidden="true">📞</span><div class="cx-txt"><strong>Need to cancel?</strong><span>${why} Please call the cafe on ${callLink()}.</span></div></div>`;
   }
 
@@ -545,7 +545,7 @@
     openModal(`<div class="cx-closed">
       <div class="cx-phone" aria-hidden="true">📞</div>
       <h2 id="modalTitle">Please call us to cancel</h2>
-      <p>${refused ? 'This order can no longer be cancelled online, the kitchen may have just started on it.' : `The 3-minute cancel window for order <span class="oid">${esc(o.id)}</span> has closed.`} To cancel it, please call the cafe${shopPhone() ? ` on <b>${esc(shopPhone())}</b>` : ''}.</p>
+      <p>${refused ? 'This order can no longer be cancelled online, the kitchen may have just started on it.' : `The 5-minute cancel window for order <span class="oid">${esc(o.id)}</span> has closed.`} To cancel it, please call the cafe${shopPhone() ? ` on <b>${esc(shopPhone())}</b>` : ''}.</p>
       <div class="row-btns">${shopPhone() ? `<a class="btn primary" href="tel:${esc(shopPhone())}">📞 Call the cafe</a>` : ''}<button class="btn ghost" data-modal-close>Close</button></div></div>`);
   }
 
