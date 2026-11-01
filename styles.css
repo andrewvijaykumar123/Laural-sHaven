@@ -346,3 +346,53 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 .ev-when{font-weight:600}
 .ev-meta{color:var(--muted);font-size:.84rem;overflow-wrap:anywhere}
 .ev-card .verify a{color:var(--accent);font-weight:700}
+
+/* Cancel window: live countdown ring, confirmation, "call us" and cancelled states */
+.cx{--rgb:52,211,153;position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr;gap:0.25rem 0.875rem;align-items:center;margin:0.875rem 0 0.25rem;padding:0.875rem;border-radius:1rem;border:1px solid rgba(var(--rgb),.45);background:linear-gradient(135deg,rgba(var(--rgb),.16),rgba(var(--rgb),.03)),var(--card2);transition:border-color .4s,background .4s}
+.cx[data-lvl=warn]{--rgb:255,180,84}
+.cx[data-lvl=low]{--rgb:248,113,113}
+.cx::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.14) 50%,transparent 70%);transform:translateX(-100%);animation:cxSheen 3.4s ease-in-out infinite}
+@keyframes cxSheen{55%,100%{transform:translateX(100%)}}
+.cx-ring{position:relative;width:3.5rem;height:3.5rem}
+.cx-ring svg{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.cx-ring circle{fill:none;stroke-width:3.5}
+.cx-track{stroke:rgba(var(--rgb),.2)}
+.cx-bar{stroke:rgb(var(--rgb));stroke-linecap:round;filter:drop-shadow(0 0 0.25rem rgba(var(--rgb),.75));transition:stroke-dashoffset .25s linear,stroke .4s}
+.cx-time{position:absolute;inset:0;display:grid;place-items:center;font:800 .82rem ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;color:rgb(var(--rgb))}
+.cx[data-lvl=low] .cx-ring{animation:cxBeat 1s ease-in-out infinite}
+@keyframes cxBeat{50%{transform:scale(1.1)}}
+.cx-txt{display:grid;gap:0.15rem;min-width:0}
+.cx-txt strong{font-size:.95rem}
+.cx-txt span{font-size:.8rem;color:var(--muted)}
+.cx-txt b{color:rgb(var(--rgb));font-variant-numeric:tabular-nums}
+.btn.cx-btn{grid-column:1/-1;margin-top:0.5rem;padding:0.65rem 1rem;background:transparent;color:var(--red);border-color:rgba(248,113,113,.55)}
+.btn.cx-btn:hover{background:rgba(248,113,113,.14);transform:translateY(-0.125rem)}
+.cx-intro{animation:cxIn .6s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes cxIn{from{opacity:0;transform:translateY(0.75rem) scale(.94)}}
+.cx-call{--rgb:96,165,250;animation:cxFlip .5s ease both}
+.cx-call::before{display:none}
+.cx-call a{color:var(--accent);font-weight:800}
+@keyframes cxFlip{from{opacity:0;transform:perspective(40rem) rotateX(70deg)}}
+.cx-ico{font-size:1.7rem;display:inline-block;animation:cxRing 2.4s ease-in-out infinite;transform-origin:50% 60%}
+.cx-confirm,.cx-closed,.cx-done{text-align:center}
+.cx-confirm p,.cx-closed p,.cx-done p{color:var(--muted);margin:0.5rem 0}
+.cx-confirm b,.cx-closed b{color:var(--accent);font-variant-numeric:tabular-nums}
+.cx-confirm .row-btns,.cx-closed .row-btns,.cx-done .row-btns{justify-content:center;margin-top:1.125rem}
+.cx-warn,.cx-phone{display:inline-block;font-size:3.2rem;line-height:1;margin-bottom:0.5rem}
+.cx-warn{animation:cxShake .7s .15s both}
+@keyframes cxShake{20%,60%{transform:rotate(-14deg) scale(1.1)}40%,80%{transform:rotate(14deg) scale(1.1)}}
+.cx-phone{animation:cxRing 1.4s ease-in-out infinite;transform-origin:50% 60%}
+@keyframes cxRing{0%,50%,100%{transform:rotate(0)}6%,18%,30%{transform:rotate(-16deg)}12%,24%,36%{transform:rotate(16deg)}}
+.btn.cx-danger{background:linear-gradient(135deg,#f87171,#dc2626);color:#fff;box-shadow:0 0.75rem 1.75rem rgba(220,38,38,.35)}
+.btn.cx-danger:hover{transform:translateY(-0.1875rem);box-shadow:0 1rem 2.25rem rgba(220,38,38,.5)}
+.cx-check-wrap{position:relative;width:5rem;height:5rem;margin:0.25rem auto 0.75rem}
+.cx-check-wrap::before,.cx-check-wrap::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--red);opacity:0;animation:cxRipple 1.2s .9s ease-out forwards}
+.cx-check-wrap::after{animation-delay:1.15s}
+@keyframes cxRipple{from{opacity:.7;transform:scale(1)}to{opacity:0;transform:scale(1.9)}}
+.cx-check{position:relative;width:100%;height:100%;overflow:visible;animation:cxPop .45s .95s both}
+@keyframes cxPop{50%{transform:scale(1.15)}}
+.cx-check circle{fill:rgba(248,113,113,.12);stroke:var(--red);stroke-width:2.5;stroke-dasharray:151;stroke-dashoffset:151;animation:cxDraw .7s .1s ease-out forwards}
+.cx-check path{fill:none;stroke:var(--red);stroke-width:3.5;stroke-linecap:round;stroke-dasharray:26;stroke-dashoffset:26;animation:cxDraw .35s .7s ease-out forwards}
+@keyframes cxDraw{to{stroke-dashoffset:0}}
+.cx-cancelled{animation:cxFlash 1.2s ease-out}
+@keyframes cxFlash{from{background:rgba(248,113,113,.45);transform:scale(1.03)}}

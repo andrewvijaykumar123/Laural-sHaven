@@ -15,7 +15,7 @@
   // Saved orders come from this device's storage: drop anything malformed rather than letting it break the page.
   const loadOrders = (fallback) => {
     const raw = store.get('orders', fallback);
-    return (Array.isArray(raw) ? raw : []).filter((o) => o && typeof o === 'object' && LH.validId(o.id) && Array.isArray(o.it) && o.it.every((l) => Array.isArray(l) && l.length === 2) && Number.isFinite(Number(o.total)))
+    return (Array.isArray(raw) ? raw : []).filter((o) => o && typeof o === 'object' && LH.validId(o.id) && Array.isArray(o.it) && o.it.every((l) => Array.isArray(l) && l.length === 2 && typeof l[0] === 'string' && Number.isInteger(l[1]) && l[1] >= 1 && l[1] <= 25) && Number.isInteger(o.total) && o.total > 0 && o.total <= 100000)
       .map((o) => (o.fb && !(Number.isInteger(o.fb.sr) && o.fb.sr >= 1 && o.fb.sr <= 5) ? { ...o, fb: null } : o)).slice(0, 25);
   };
   let orders = loadOrders([]);
@@ -210,7 +210,7 @@
       <form class="form" id="coForm" novalidate>
         <div class="field" id="fName"><label for="coName">Your name</label><input id="coName" maxlength="40" autocomplete="name" value="${esc(profile.n)}" placeholder="e.g. Anita"><div class="msg"></div></div>
         <div class="field" id="fPhone"><label for="coPhone">Mobile number</label><input id="coPhone" inputmode="tel" maxlength="14" autocomplete="tel" value="${esc(profile.p)}" placeholder="10-digit number"><div class="msg"></div></div>
-        <div class="field" id="fEmail"><label for="coEmail">Email (optional)</label><input id="coEmail" type="email" inputmode="email" maxlength="80" autocomplete="email" value="${esc(profile.em || '')}" placeholder="you@example.com"><div class="msg"></div><small class="hint">We email you within seconds when your order is received, confirmed, ready or on its way.</small></div>
+        <div class="field" id="fEmail"><label for="coEmail">Email (optional)</label><input id="coEmail" type="email" inputmode="email" maxlength="80" autocomplete="email" value="${esc(profile.em || '')}" placeholder="you@example.com"><div class="msg"></div><small class="hint">We email you a confirmation when your order is accepted and your invoice when it is complete.</small></div>
         <div class="field"><label>Service</label><div class="seg three" id="svcSeg"><button type="button" data-v="dine" class="${service === 'dine' ? 'on' : ''}">🍽️ Dine-in</button><button type="button" data-v="take" class="${service === 'take' ? 'on' : ''}">🥡 Takeaway</button><button type="button" data-v="deliver" class="${service === 'deliver' ? 'on' : ''}">🛵 Delivery</button></div></div>
         <div class="field" id="fTable" ${service === 'dine' ? '' : 'hidden'}><label for="coTable">Table number (optional)</label><input id="coTable" maxlength="8" placeholder="e.g. 4"></div>
         <div id="fDeliver" ${service === 'deliver' ? '' : 'hidden'}>
@@ -459,7 +459,7 @@
     }
   }
 
-  const upiLink = (o) => `upi://pay?pa=${encodeURIComponent(UPI.id)}&pn=${encodeURIComponent(UPI.name)}&am=${o.total}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
+  const upiLink = (o) => `upi://pay?pa=${encodeURIComponent(UPI.id)}&pn=${encodeURIComponent(UPI.name)}&am=${encodeURIComponent(o.total)}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
 
   // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
   const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
@@ -477,11 +477,129 @@
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
+      ${cancelBox(o, true)}
       ${otpBox(o)}
       ${pay}
       <div class="row-btns"><button class="btn ghost" id="trackNow">Track my order</button><button class="btn ghost" data-modal-close>Keep browsing</button></div>`);
     $('#trackNow').addEventListener('click', () => { closeModal(); openDrawer('ordersDrawer'); });
+    cxSync();
   }
+
+  /* ---------- Cancel within 3 minutes, with a live countdown. After that the customer has to phone the cafe. ---------- */
+  const CX = LH.CANCEL;
+  const CX_C = 2 * Math.PI * 19;
+  const shopPhone = () => (window.LHMail && window.LHMail.CAFE && window.LHMail.CAFE.phone) || '';
+  const canCancel = (o) => CX.FROM.includes(o.status) && LH.cancelLeft(o) > 0;
+  const mmss = (ms) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const cxLevel = (ms) => (ms > 60000 ? 'ok' : ms > 20000 ? 'warn' : 'low');
+  const cxOffset = (ms) => (CX_C * (1 - ms / CX.MS)).toFixed(2);
+  const callLink = () => { const t = shopPhone(); return t ? `<a href="tel:${esc(t)}">${esc(t)}</a>` : 'the cafe'; };
+
+  function cancelBox(o, intro) {
+    if (['completed', 'rejected'].includes(o.status)) return '';
+    if (canCancel(o)) {
+      const left = LH.cancelLeft(o);
+      return `<div class="cx${intro ? ' cx-intro' : ''}" data-cx="${esc(o.id)}" data-lvl="${cxLevel(left)}">
+        <div class="cx-ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle class="cx-track" cx="22" cy="22" r="19"/><circle class="cx-bar" cx="22" cy="22" r="19" stroke-dasharray="${CX_C.toFixed(2)}" stroke-dashoffset="${cxOffset(left)}"/></svg><b class="cx-time">${mmss(left)}</b></div>
+        <div class="cx-txt"><strong>Changed your mind?</strong><span>You can cancel this order for the next <b role="timer" data-cxleft="${esc(o.id)}">${mmss(left)}</b>.</span></div>
+        <button type="button" class="btn cx-btn" data-cancel="${esc(o.id)}">Cancel order</button></div>`;
+    }
+    const why = CX.FROM.includes(o.status) ? 'The 3-minute cancel window has closed.' : 'Your order is already being prepared.';
+    return `<div class="cx cx-call"><span class="cx-ico" aria-hidden="true">📞</span><div class="cx-txt"><strong>Need to cancel?</strong><span>${why} Please call the cafe on ${callLink()}.</span></div></div>`;
+  }
+
+  let cxTimer = 0;
+  function cxTick() {
+    const live = $$('[data-cx], [data-cxleft]').filter((el) => el.offsetParent !== null);
+    if (!live.length) { clearInterval(cxTimer); cxTimer = 0; return; }
+    live.forEach((el) => {
+      const id = el.dataset.cx || el.dataset.cxleft;
+      const o = orders.find((x) => x.id === id);
+      if (!o) return;
+      const left = LH.cancelLeft(o);
+      if (el.dataset.cx) {
+        if (left <= 0 || !CX.FROM.includes(o.status)) { el.outerHTML = cancelBox(o); return; }
+        el.dataset.lvl = cxLevel(left);
+        $('.cx-bar', el).style.strokeDashoffset = cxOffset(left);
+        $('.cx-time', el).textContent = mmss(left);
+      } else el.textContent = mmss(left);
+    });
+    const confirm = $('#cxConfirm');
+    if (confirm && !$('#modal').hidden) {
+      const o = orders.find((x) => x.id === confirm.dataset.id);
+      if (o && !canCancel(o) && !confirm.dataset.busy) showCancelClosed(o);
+    }
+  }
+  function cxSync() { if (!cxTimer && $('[data-cx], [data-cxleft]')) cxTimer = setInterval(cxTick, 250); }
+
+  function askCancel(id) {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return;
+    if (!canCancel(o)) { showCancelClosed(o); return; }
+    openModal(`<div class="cx-confirm" id="cxConfirm" data-id="${esc(o.id)}">
+      <div class="cx-warn" aria-hidden="true">⚠️</div>
+      <h2 id="modalTitle">Cancel this order?</h2>
+      <p>Order <span class="oid">${esc(o.id)}</span> (${fmt(o.total)}) will be cancelled and the kitchen is told straight away. You have <b data-cxleft="${esc(o.id)}">${mmss(LH.cancelLeft(o))}</b> left to change your mind.</p>
+      ${o.pay === 'upi' ? '<p>Already paid by UPI? Please call the cafe about your refund.</p>' : ''}
+      <div class="row-btns"><button class="btn primary" data-modal-close>Keep my order</button><button class="btn cx-danger" data-cx-yes="${esc(o.id)}">Yes, cancel order</button></div></div>`);
+    cxSync();
+  }
+
+  function showCancelClosed(o, refused) {
+    openModal(`<div class="cx-closed">
+      <div class="cx-phone" aria-hidden="true">📞</div>
+      <h2 id="modalTitle">Please call us to cancel</h2>
+      <p>${refused ? 'This order can no longer be cancelled online, the kitchen may have just started on it.' : `The 3-minute cancel window for order <span class="oid">${esc(o.id)}</span> has closed.`} To cancel it, please call the cafe${shopPhone() ? ` on <b>${esc(shopPhone())}</b>` : ''}.</p>
+      <div class="row-btns">${shopPhone() ? `<a class="btn primary" href="tel:${esc(shopPhone())}">📞 Call the cafe</a>` : ''}<button class="btn ghost" data-modal-close>Close</button></div></div>`);
+  }
+
+  function showCancelled(o) {
+    openModal(`<div class="cx-done">
+      <div class="cx-check-wrap"><svg class="cx-check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M18 18l16 16M34 18L18 34"/></svg></div>
+      <h2 id="modalTitle">Order cancelled</h2>
+      <p>Order <span class="oid">${esc(o.id)}</span> has been cancelled and the kitchen has been told. Nothing will be prepared.</p>
+      ${o.pay === 'upi' ? '<p>Already paid by UPI? Please call the cafe about your refund.</p>' : ''}
+      <div class="row-btns"><button class="btn primary" data-modal-close>Done</button><button class="btn ghost" data-cx-again="${esc(o.id)}">🔁 Order again</button></div></div>`);
+  }
+
+  async function doCancel(id) {
+    const o = orders.find((x) => x.id === id);
+    const btn = $('[data-cx-yes]');
+    if (!o || !btn || btn.dataset.busy) return;
+    if (!canCancel(o)) { showCancelClosed(o); return; }
+    btn.dataset.busy = '1';
+    $('#cxConfirm').dataset.busy = '1';
+    btn.disabled = true;
+    btn.textContent = 'Cancelling...';
+    try {
+      const ts = await LH.cancelOrder(o);
+      o.status = 'rejected'; o.statusTs = ts; o.reason = CX.REASON;
+      delete o.otp;
+      saveOrders();
+      riders.delete(id);
+      if ($('#ordersDrawer').classList.contains('open')) renderOrders();
+      if (trackId === id) { drawRider(); renderTrack(); }
+      showCancelled(o);
+    } catch (err) {
+      if (err && err.code === 'permission-denied') showCancelClosed(o, true);
+      else {
+        toast('Could not reach the server. Please try again, or call the cafe.', 'bad');
+        delete btn.dataset.busy;
+        delete $('#cxConfirm').dataset.busy;
+        btn.disabled = false;
+        btn.textContent = 'Yes, cancel order';
+      }
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const ask = e.target.closest('[data-cancel]');
+    if (ask) { askCancel(ask.dataset.cancel); return; }
+    const yes = e.target.closest('[data-cx-yes]');
+    if (yes) { doCancel(yes.dataset.cxYes); return; }
+    const again = e.target.closest('[data-cx-again]');
+    if (again) { closeModal(); reorder(again.dataset.cxAgain); }
+  });
 
   /* ---------- My orders ---------- */
   const FLOW = ['pending', 'accepted', 'cooking', 'ready', 'completed'];
@@ -507,21 +625,21 @@
       const step = Math.max(0, flow.indexOf(o.status));
       const label = (s) => (s === 'completed' && o.svc === 'deliver' ? 'Delivered' : STATUS[s].short);
       const tracker = o.status === 'rejected'
-        ? `<div class="rej">Sorry, the kitchen could not take this order${o.reason ? `: ${esc(o.reason)}` : '.'}</div>`
+        ? (o.reason === CX.REASON ? '<div class="rej cx-cancelled">You cancelled this order.</div>' : `<div class="rej">Sorry, the kitchen could not take this order${o.reason ? `: ${esc(o.reason)}` : '.'}</div>`)
         : `<div class="tracker">${flow.map((s, i) => `<div class="st ${i < step || o.status === 'completed' ? 'done' : ''} ${i === step && o.status !== 'completed' ? 'now' : ''}"><i>${i < step || o.status === 'completed' ? '✓' : FLOW_ICON[s]}</i>${label(s)}</div>`).join('')}</div>`;
       const ri = riderInfo(o);
-      let eta = !['completed', 'rejected', 'ready', 'out'].includes(o.status) ? `<div class="verify">Estimated ready in about ${LH.getCfg().prep} minutes after acceptance.</div>` : '';
+      let eta = !['completed', 'rejected', 'ready', 'out'].includes(o.status) ? `<div class="verify">Estimated ready in about ${esc(String(LH.getCfg().prep))} minutes after acceptance.</div>` : '';
       if (o.status === 'out') eta = ri ? `<div class="verify ok">🛵 About ${ri.min} min away · ${ri.km.toFixed(1)} km · updated ${ago(ri.age)}</div>` : '<div class="verify ok">🛵 On the way. Live location appears here shortly.</div>';
       const pay = o.pay === 'upi'
         ? `<div class="verify ${o.payVerified ? 'ok' : ''}">${o.payVerified ? '✔ Payment verified' : 'UPI payment awaiting verification'}</div>`
         : `<div class="verify">${o.svc === 'deliver' ? 'Cash on delivery' : 'Pay at counter'}</div>`;
       const where = o.svc === 'take' ? 'Takeaway' : o.svc === 'deliver' ? `Delivery${o.fee ? ` (incl. ${fmt(o.fee)})` : ' (free)'}` : `Dine-in${o.tbl ? ` · Table ${esc(o.tbl)}` : ''}`;
       return `<article class="order-card" data-id="${esc(o.id)}">
-        <div class="head"><span class="oid">${esc(o.id)}</span><span class="badge" style="background:${st.color}">${esc(LH.statusLabel(o, o.status))}</span></div>
+        <div class="head"><span class="oid">${esc(o.id)}</span><span class="badge" style="background:${st.color}">${esc(LH.statusLabel(o, o.status, o.reason))}</span></div>
         <div class="items-list">${o.it.map(([id, q]) => `${q} × ${esc(ITEMS.get(id)?.name || id)}`).join(', ')}</div>
         <strong>${fmt(o.total)}</strong> <span style="color:var(--muted);font-size:.8rem">· ${where} · ${new Date(o.ts).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span>
         ${o.svc === 'deliver' ? `<div class="verify">📍 ${esc(o.addr)}</div>` : ''}
-        ${tracker}${eta}${otpBox(o)}${pay}
+        ${tracker}${eta}${otpBox(o)}${pay}${cancelBox(o)}
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
         ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
         ${o.status === 'completed' ? (o.fb ? `<div class="fb-done" aria-label="Your rating: ${o.fb.sr} out of 5">Your rating <b aria-hidden="true">${'★'.repeat(o.fb.sr)}${'☆'.repeat(5 - o.fb.sr)}</b> Thank you for your feedback!</div>` : `<button class="btn primary" style="margin-top:10px;width:100%" data-rate="${esc(o.id)}">⭐ Rate your order</button>`) : ''}
@@ -529,6 +647,7 @@
         ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Invoice</button>`}
       </article>`;
     }).join('') + (finished ? '<button class="btn ghost" style="width:100%" id="clearDone">Clear finished orders</button>' : '');
+    cxSync();
   }
 
   /* Invoice (no GST) for the customer's own order, printed or saved as PDF from the browser's print dialog. */
@@ -651,7 +770,7 @@
     const ri = riderInfo(o);
     let sub, info;
     if (o.status === 'completed') { sub = 'Delivered ✅'; info = '<b>Your order has been delivered.</b> Enjoy your meal!'; }
-    else if (o.status === 'rejected') { sub = 'Cancelled'; info = `<b>This order was not accepted.</b>${o.reason ? ` ${esc(o.reason)}` : ''}`; }
+    else if (o.status === 'rejected') { sub = 'Cancelled'; info = o.reason === CX.REASON ? '<b>You cancelled this order.</b>' : `<b>This order was not accepted.</b>${o.reason ? ` ${esc(o.reason)}` : ''}`; }
     else if (o.status === 'out' && ri) {
       sub = `About ${ri.min} min away`;
       info = `<b>🛵 ${ri.km.toFixed(1)} km from you</b> · updated ${ago(ri.age)}${ri.age > 180000 ? '<br><span class="tv-warn">Live location is delayed. The delivery partner may be in a low-signal area.</span>' : ''}`;
@@ -966,7 +1085,7 @@
     saveOrders();
     if (s === 'completed' || s === 'rejected') riders.delete(id);
     if (changed) {
-      toast(`Order ${id}: ${LH.statusLabel(o, s)}${s === 'ready' ? (o.svc === 'deliver' ? ' - packed and about to leave!' : ' - come and get it!') : s === 'out' ? ` 🛵 - track it live in My orders${o.otp ? `. Your delivery code is ${o.otp}` : ''}` : s === 'completed' && !o.fb ? ' - how was it? Rate it in My orders' : ''}`, s === 'rejected' ? 'bad' : 'ok');
+      toast(`Order ${id}: ${LH.statusLabel(o, s, r)}${s === 'ready' ? (o.svc === 'deliver' ? ' - packed and about to leave!' : ' - come and get it!') : s === 'out' ? ` 🛵 - track it live in My orders${o.otp ? `. Your delivery code is ${o.otp}` : ''}` : s === 'completed' && !o.fb ? ' - how was it? Rate it in My orders' : ''}`, s === 'rejected' ? 'bad' : 'ok');
       if (s === 'ready' && o.svc !== 'deliver') confetti();
       if (!$('#ordersDrawer').classList.contains('open')) $('#ordersDot').hidden = false;
     }
