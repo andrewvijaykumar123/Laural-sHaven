@@ -460,7 +460,11 @@
   }
 
   // Same payload as the cafe's QR: Google Pay declines links to this personal VPA that carry an amount or note ("bank limit exceeded").
-  const upiLink = () => `upi://pay?pa=${UPI.id}&pn=${encodeURIComponent(UPI.name)}&aid=${UPI.aid}`;
+  const upiQuery = () => `pa=${UPI.id}&pn=${encodeURIComponent(UPI.name)}&aid=${UPI.aid}`;
+  const upiLink = () => `upi://pay?${upiQuery()}`;
+  // Explicit-package Android intents: they skip the app chooser and may be treated differently from a generic upi:// link.
+  const UPI_APPS = [['Google Pay', 'com.google.android.apps.nbu.paisa.user'], ['PhonePe', 'com.phonepe.app'], ['Paytm', 'net.one97.paytm']];
+  const upiAppLink = (pkg) => `intent://pay?${upiQuery()}#Intent;scheme=upi;package=${pkg};end`;
 
   // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
   const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
@@ -469,10 +473,12 @@
   function showSuccess(o) {
     const pay = o.pay === 'upi'
       ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> with any UPI app: enter the amount and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink())}">Open UPI app to pay ${fmt(o.total)}</a></div>
+         <div class="row-btns upi-open"><a class="btn primary" href="${esc(upiLink())}">Open UPI app to pay ${fmt(o.total)}</a>
+           <div class="upi-apps">${UPI_APPS.map(([n, p]) => `<a class="btn ghost" href="${esc(upiAppLink(p))}">${n}</a>`).join('')}</div></div>
          <figure class="qr-card">
            <div class="qr-frame"><img src="assets/payment-upi.jpeg" alt="UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1152" height="1600" decoding="async"></div>
            <figcaption>Or scan this code, enter <b>${fmt(o.total)}</b> and add <b>${esc(o.id)}</b> as the note.</figcaption>
+           <a class="btn ghost upi-save" href="assets/payment-upi.jpeg" download="Laurals-Haven-UPI-QR.jpeg">Save QR, then scan it from your gallery</a>
          </figure>
          <div class="upi-box"><small>UPI ID</small><b id="upiId">${esc(UPI.id)}</b><button type="button" class="btn ghost" id="copyUpi">Copy UPI ID</button></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
