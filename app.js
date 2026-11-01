@@ -473,7 +473,8 @@
            <div class="qr-frame"><img id="qrImg" src="assets/payment-upi.jpeg" alt="Paytm UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1039" height="1600" decoding="async"></div>
            <figcaption>Enter <b>${fmt(o.total)}</b> after scanning and add <b>${esc(o.id)}</b> as the note.</figcaption>
          </figure>
-         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Open UPI app with ${fmt(o.total)}</a></div>`
+         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Open UPI app with ${fmt(o.total)}</a></div>
+         <p class="upi-hint">Google Pay can't open this link. In Google Pay, take a screenshot of the code above and use scan from gallery instead.</p>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
