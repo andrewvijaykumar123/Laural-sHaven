@@ -459,14 +459,22 @@
     }
   }
 
+  // Literal '@' and a two-decimal amount, as UPI apps expect.
+  const upiLink = (o) => `upi://pay?pa=${UPI.id}&pn=${encodeURIComponent(UPI.name)}&am=${Number(o.total).toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
+
   // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
   const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
     ? `<div class="otp-box" role="group" aria-label="Delivery code"><small>Your delivery code</small><b>${esc(o.otp)}</b><span>Give it to the delivery partner only when you receive your order.${o.em ? ' We also emailed it to you.' : ''}</span></div>` : '');
 
   function showSuccess(o) {
     const pay = o.pay === 'upi'
-      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> to our UPI ID in any UPI app, and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <div class="upi-box"><small>UPI ID</small><b id="upiId">${esc(UPI.id)}</b><button type="button" class="btn primary" id="copyUpi">Copy UPI ID</button></div>`
+      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> with any UPI app and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
+         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Pay ${fmt(o.total)} in your UPI app</a></div>
+         <figure class="qr-card">
+           <div class="qr-frame"><img src="assets/payment-upi.jpeg" alt="UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1152" height="1600" decoding="async"></div>
+           <figcaption>Or scan this code, enter <b>${fmt(o.total)}</b> and add <b>${esc(o.id)}</b> as the note.</figcaption>
+         </figure>
+         <div class="upi-box"><small>UPI ID</small><b id="upiId">${esc(UPI.id)}</b><button type="button" class="btn ghost" id="copyUpi">Copy UPI ID</button></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
@@ -638,7 +646,7 @@
         ${o.svc === 'deliver' ? `<div class="verify">📍 ${esc(o.addr)}</div>` : ''}
         ${tracker}${eta}${otpBox(o)}${pay}${cancelBox(o)}
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
-        ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show UPI ID</button>` : ''}
+        ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Pay by UPI</button>` : ''}
         ${o.status === 'completed' ? (o.fb ? `<div class="fb-done" aria-label="Your rating: ${o.fb.sr} out of 5">Your rating <b aria-hidden="true">${'★'.repeat(o.fb.sr)}${'☆'.repeat(5 - o.fb.sr)}</b> Thank you for your feedback!</div>` : `<button class="btn primary" style="margin-top:10px;width:100%" data-rate="${esc(o.id)}">⭐ Rate your order</button>`) : ''}
         ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
         ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Download invoice (PDF)</button>`}

@@ -175,6 +175,13 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 @keyframes pop{from{transform:scale(.88);opacity:0}}
 .modal-card h2{font-family:var(--serif);font-size:1.7rem;margin-bottom:0.375rem}
 .pay-note{padding:0.75rem 0.875rem;border-radius:0.8125rem;background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.3);font-size:.86rem;margin-bottom:0.875rem}
+.qr-card{display:grid;justify-items:center;gap:.75rem;margin:1rem 0}
+.qr-frame{width:min(16rem,100%,calc(50dvh * .72));aspect-ratio:1152/1600;overflow:hidden;border-radius:1.25rem;background:#fff;box-shadow:0 1.25rem 3rem rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.1)}
+.qr-frame img{display:block;width:100%;height:auto}
+.qr-card figcaption{max-width:20rem;text-align:center;color:var(--muted);font-size:.84rem;line-height:1.45}
+.qr-card figcaption b{color:var(--text)}
+.upi-open{display:none}
+@media (max-width:800px){.upi-open{display:inline-flex}}
 .upi-box{display:grid;justify-items:center;gap:.5rem;padding:1rem;margin-bottom:.875rem;border-radius:.8125rem;background:var(--card);border:1px solid var(--line);text-align:center}
 .upi-box small{font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .upi-box b{font-family:var(--serif);font-size:1.35rem;color:var(--accent);overflow-wrap:anywhere;user-select:all}
