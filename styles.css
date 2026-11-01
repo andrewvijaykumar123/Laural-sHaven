@@ -182,8 +182,6 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 .qr-frame img{display:block;width:100%;height:auto}
 .qr-card figcaption{max-width:20rem;text-align:center;color:var(--muted);font-size:.84rem;line-height:1.45}
 .qr-card figcaption b{color:var(--text)}
-.upi-open{display:none}
-@media (max-width:800px){.upi-open{display:inline-flex}}
 .pay-note{padding:0.75rem 0.875rem;border-radius:0.8125rem;background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.3);font-size:.86rem;margin-bottom:0.875rem}
 .row-btns{display:grid;gap:0.625rem;margin-top:0.75rem}
 
