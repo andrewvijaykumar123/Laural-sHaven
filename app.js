@@ -644,17 +644,22 @@
         ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
         ${o.status === 'completed' ? (o.fb ? `<div class="fb-done" aria-label="Your rating: ${o.fb.sr} out of 5">Your rating <b aria-hidden="true">${'★'.repeat(o.fb.sr)}${'☆'.repeat(5 - o.fb.sr)}</b> Thank you for your feedback!</div>` : `<button class="btn primary" style="margin-top:10px;width:100%" data-rate="${esc(o.id)}">⭐ Rate your order</button>`) : ''}
         ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
-        ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Invoice</button>`}
+        ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Download invoice (PDF)</button>`}
       </article>`;
     }).join('') + (finished ? '<button class="btn ghost" style="width:100%" id="clearDone">Clear finished orders</button>' : '');
     cxSync();
   }
 
-  /* Invoice (no GST) for the customer's own order, printed or saved as PDF from the browser's print dialog. */
-  function printInvoice(o) {
+  /* Invoice (no GST) for the customer's own order, downloaded as a PDF; the print dialog is the fallback. */
+  async function printInvoice(o) {
     if (!o || !window.LHMail) return;
-    const area = $('#printArea');
-    area.innerHTML = window.LHMail.invoiceHtml(LH, o, { paid: !!o.payVerified || o.status === 'completed' });
+    const paid = !!o.payVerified || o.status === 'completed';
+    try {
+      await window.LHInvoicePdf.download(LH, window.LHMail, o, paid);
+      toast('Invoice downloaded.');
+      return;
+    } catch (err) { /* fall through to print */ }
+    $('#printArea').innerHTML = window.LHMail.invoiceHtml(LH, o, { paid });
     const prev = document.title;
     document.title = `Invoice ${o.id}`;
     window.print();
