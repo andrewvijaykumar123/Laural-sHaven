@@ -2,8 +2,8 @@
 const CACHE = 'lh-shell-v1';
 const SHELL = [
   './', 'index.html', 'styles.css', 'fb-config.js', 'fb.js', 'core.js', 'map.js', 'map.css', 'mailtpl.js', 'app.js', 'pwa.js',
-  'manifest.webmanifest', 'assets/icon-192.png', 'assets/apple-touch-icon.png', 'assets/payment-upi.jpeg',
-  'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/qrcode/qrcode.js',
+  'manifest.webmanifest', 'assets/icon-192.png', 'assets/apple-touch-icon.png',
+  'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
 ];
 
 // Also cache the exact (cache-busted) URLs the current index.html asks for.

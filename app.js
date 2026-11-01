@@ -459,38 +459,14 @@
     }
   }
 
-  // Standard UPI link: '@' stays literal, amount has two decimals. UPI to a merchant/bank VPA is free for both sides.
-  const upiLink = (o) => `upi://pay?pa=${UPI.id}&pn=${encodeURIComponent(UPI.name.replace(/[^\w ]/g, ''))}&am=${Number(o.total).toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
-
-  // Per-order QR drawn in the browser (amount and order ID included); empty if the library failed to load.
-  function upiQr(o) {
-    if (typeof window.qrcode !== 'function') return '';
-    try {
-      const q = window.qrcode(0, 'M');
-      q.addData(upiLink(o));
-      q.make();
-      return q.createSvgTag({ cellSize: 6, margin: 12, alt: `UPI QR code to pay ${o.total} rupees to ${UPI.id}` });
-    } catch (err) { return ''; }
-  }
-
-  const fixedQr = () => `<div class="qr-frame"><img id="qrImg" src="assets/payment-upi.jpeg" alt="Fixed UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1039" height="1600" decoding="async"></div>`;
-
   // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
   const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
     ? `<div class="otp-box" role="group" aria-label="Delivery code"><small>Your delivery code</small><b>${esc(o.otp)}</b><span>Give it to the delivery partner only when you receive your order.${o.em ? ' We also emailed it to you.' : ''}</span></div>` : '');
 
   function showSuccess(o) {
-    const svg = o.pay === 'upi' ? upiQr(o) : '';
     const pay = o.pay === 'upi'
-      ? `<div class="pay-note">Scan with any UPI app and pay <b>${fmt(o.total)}</b>. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
-         <figure class="qr-card">
-           <div class="qr-amt"><small>Amount to pay</small><b>${fmt(o.total)}</b></div>
-           ${svg ? `<div class="qr-frame qr-dyn">${svg}</div>` : fixedQr()}
-           <figcaption>${svg ? `The amount and order <b>${esc(o.id)}</b> are filled in for you.` : `Enter <b>${fmt(o.total)}</b> after scanning and add <b>${esc(o.id)}</b> as the note.`}</figcaption>
-         </figure>
-         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Open UPI app with ${fmt(o.total)}</a><button type="button" class="btn ghost" id="copyUpi">Copy UPI ID: ${esc(UPI.id)}</button></div>
-         <p class="upi-hint">Google Pay can't open this link. In Google Pay, take a screenshot of the code above and use scan from gallery instead.</p>
-         ${svg ? `<details class="qr-alt"><summary>Scan not working? Use our fixed QR</summary>${fixedQr()}<p>Enter <b>${fmt(o.total)}</b> and add <b>${esc(o.id)}</b> as the note.</p></details>` : ''}`
+      ? `<div class="pay-note">Pay <b>${fmt(o.total)}</b> to our UPI ID in any UPI app, and add <b>${esc(o.id)}</b> as the note. ${o.svc === 'deliver' ? 'We confirm your payment before the order leaves.' : 'We confirm your payment at the counter.'}</div>
+         <div class="upi-box"><small>UPI ID</small><b id="upiId">${esc(UPI.id)}</b><button type="button" class="btn primary" id="copyUpi">Copy UPI ID</button></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
@@ -501,7 +477,7 @@
     $('#trackNow').addEventListener('click', () => { closeModal(); openDrawer('ordersDrawer'); });
     const copy = $('#copyUpi');
     if (copy) copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(UPI.id); toast('UPI ID copied. Paste it in any UPI app.', 'ok'); } catch (err) { toast(`UPI ID: ${UPI.id}`); }
+      try { await navigator.clipboard.writeText(UPI.id); toast('UPI ID copied. Paste it in your UPI app.', 'ok'); } catch (err) { toast(`UPI ID: ${UPI.id}`); }
     });
     cxSync();
   }
@@ -662,7 +638,7 @@
         ${o.svc === 'deliver' ? `<div class="verify">📍 ${esc(o.addr)}</div>` : ''}
         ${tracker}${eta}${otpBox(o)}${pay}${cancelBox(o)}
         ${o.svc === 'deliver' && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ${o.status === 'out' ? 'primary' : 'ghost'}" style="margin-top:10px;width:100%" data-track="${esc(o.id)}">🗺️ Track on map</button>` : ''}
-        ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show payment QR</button>` : ''}
+        ${o.pay === 'upi' && !o.payVerified && !['rejected', 'completed'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-pay="${esc(o.id)}">Show UPI ID</button>` : ''}
         ${o.status === 'completed' ? (o.fb ? `<div class="fb-done" aria-label="Your rating: ${o.fb.sr} out of 5">Your rating <b aria-hidden="true">${'★'.repeat(o.fb.sr)}${'☆'.repeat(5 - o.fb.sr)}</b> Thank you for your feedback!</div>` : `<button class="btn primary" style="margin-top:10px;width:100%" data-rate="${esc(o.id)}">⭐ Rate your order</button>`) : ''}
         ${['completed', 'rejected'].includes(o.status) ? `<button class="btn ghost" style="margin-top:10px;width:100%" data-again="${esc(o.id)}">🔁 Order again</button>` : ''}
         ${o.status === 'rejected' ? '' : `<button class="btn ghost" style="margin-top:10px;width:100%" data-invoice="${esc(o.id)}">🧾 Download invoice (PDF)</button>`}
