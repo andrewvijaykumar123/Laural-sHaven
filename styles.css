@@ -180,6 +180,13 @@ h1 em{font-style:italic;background:linear-gradient(100deg,var(--accent),var(--ac
 .qr-amt b{font-family:var(--serif);font-size:1.5rem;color:var(--accent)}
 .qr-frame{width:min(18rem,100%,calc(56dvh * .651));aspect-ratio:1039/1596;overflow:hidden;border-radius:1.25rem;background:#fff;box-shadow:0 1.25rem 3rem rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.1)}
 .qr-frame img{display:block;width:100%;height:auto}
+.qr-dyn{aspect-ratio:1;width:min(16rem,100%)}
+.qr-dyn svg{display:block;width:100%;height:100%}
+.qr-alt{margin-top:.875rem;color:var(--muted);font-size:.84rem}
+.qr-alt summary{cursor:pointer;text-align:center}
+.qr-alt .qr-frame{margin:.75rem auto 0}
+.qr-alt p{text-align:center;margin:.5rem 0 0}
+#copyUpi{overflow-wrap:anywhere}
 .qr-card figcaption{max-width:20rem;text-align:center;color:var(--muted);font-size:.84rem;line-height:1.45}
 .qr-card figcaption b{color:var(--text)}
 .upi-open,.upi-hint{display:none}
