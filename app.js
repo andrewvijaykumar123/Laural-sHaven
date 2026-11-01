@@ -459,8 +459,7 @@
     }
   }
 
-  // Same payload as the Paytm QR with a literal '@' (not %40); this VPA is rejected when the link adds an amount or note.
-  const upiLink = () => `upi://pay?pa=${UPI.id}&pn=Paytm&tn=Verified%20Paytm%20Account`;
+  const upiLink = (o) => `upi://pay?pa=${encodeURIComponent(UPI.id)}&pn=${encodeURIComponent(UPI.name)}&am=${encodeURIComponent(o.total)}&cu=INR&tn=${encodeURIComponent(`Order ${o.id}`)}`;
 
   // The code is only meaningful until the order is closed; it is also emailed when the customer gave an address.
   const otpBox = (o) => (o.svc === 'deliver' && LH.validOtp(o.otp) && !['completed', 'rejected'].includes(o.status)
@@ -474,7 +473,7 @@
            <div class="qr-frame"><img id="qrImg" src="assets/payment-upi.jpeg" alt="Paytm UPI QR code for Laural's Haven, UPI ID ${esc(UPI.id)}" width="1039" height="1600" decoding="async"></div>
            <figcaption>Enter <b>${fmt(o.total)}</b> after scanning and add <b>${esc(o.id)}</b> as the note.</figcaption>
          </figure>
-         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink())}">Open UPI app</a></div>`
+         <div class="row-btns"><a class="btn primary upi-open" href="${esc(upiLink(o))}">Open UPI app with ${fmt(o.total)}</a></div>`
       : `<div class="pay-note">${o.svc === 'deliver' ? `Please keep <b>${fmt(o.total)}</b> in cash ready for the delivery partner.` : 'Please pay at the counter when you collect or finish your meal.'}</div>`;
     openModal(`<h2 id="modalTitle">Order placed 🎉</h2>
       <p style="color:var(--muted)">Your order ID is <span class="oid">${esc(o.id)}</span>. Keep this page open to see live status.${o.svc === 'deliver' ? ' When your order is out for delivery you can follow it live on the map.' : ''}</p>
